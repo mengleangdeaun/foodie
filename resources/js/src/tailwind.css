@@ -705,7 +705,7 @@ pre.hljs {
         --card-foreground: 222.2 84% 4.9%;
         --popover: 0 0% 100%;
         --popover-foreground: 222.2 84% 4.9%;
-        --primary: 222.2 47.4% 11.2%;
+        --primary: 140 60% 35%;
         --primary-foreground: 210 40% 98%;
         --secondary: 210 40% 96.1%;
         --secondary-foreground: 222.2 47.4% 11.2%;
@@ -732,7 +732,7 @@ pre.hljs {
         --card-foreground: 210 40% 98%;
         --popover: 222.2 84% 4.9%;
         --popover-foreground: 210 40% 98%;
-        --primary: 210 40% 98%;
+        --primary: 140 55% 45%;
         --primary-foreground: 222.2 47.4% 11.2%;
         --secondary: 217.2 32.6% 17.5%;
         --secondary-foreground: 210 40% 98%;
@@ -751,6 +751,7 @@ pre.hljs {
         --chart-4: 280 65% 60%;
         --chart-5: 340 75% 55%;
     }
+
 /* Add this to your tailwind.css or global CSS file */
     .font-sans {
         font-family: system-ui, -apple-system, sans-serif;

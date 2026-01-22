@@ -28,7 +28,8 @@ import {
   UtensilsCrossed,
   Thermometer,
   Zap,
-  AlertCircle
+  AlertCircle,
+  ListOrdered
 } from "lucide-react";
 import { 
   BarChart, 
@@ -57,6 +58,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast , toast } from "@/hooks/use-toast";
+import Tippy from '@tippyjs/react';
+import 'tippy.js/dist/tippy.css';
+import 'tippy.js/animations/shift-away.css';
+import OrderTypeBadge from "./components/OrderTypeBadge"; 
+import { ORDER_STATUS, STATUS_CONFIG } from '@/constants/orderStatus';
+import { cn } from "@/lib/utils";
 
 // Types
 interface DashboardData {
@@ -139,7 +146,7 @@ const BranchDashboard = () => {
             setData(res.data);
         } catch (error: any) {
             console.error('Error fetching dashboard data:', error);
-            toast.error(error.response?.data?.error || 'Failed to fetch dashboard data');
+            toast(error.response?.data?.error || 'Failed to fetch dashboard data');
         } finally {
             setLoading(false);
         }
@@ -217,6 +224,13 @@ const BranchDashboard = () => {
         
         return [headers, ...rows].map(row => row.join(',')).join('\n');
     };
+
+const getStatusClasses = (status: string): string => {
+    const config = STATUS_CONFIG[status];
+    if (!config) return '';
+    
+    return `${config.bg} ${config.border} ${config.text} ${config.darkBg} ${config.darkBorder} ${config.darkText} border-2`;
+};
 
     // Format currency
     const formatCurrency = (amount: number) => {
@@ -369,7 +383,7 @@ const BranchDashboard = () => {
 
             {/* Tabs for different views */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+                <TabsList className="grid grid-cols-5 w-full max-w-2xl">
                     <TabsTrigger value="overview">
                         <BarChart3 className="h-4 w-4 mr-2" />
                         Overview
@@ -385,6 +399,10 @@ const BranchDashboard = () => {
                     <TabsTrigger value="heatmap">
                         <Thermometer className="h-4 w-4 mr-2" />
                         Heatmap
+                    </TabsTrigger>
+                    <TabsTrigger value="recentOrder">
+                        <ListOrdered className="h-4 w-4 mr-2" />
+                        Recent Order
                     </TabsTrigger>
                 </TabsList>
 
@@ -426,14 +444,13 @@ const BranchDashboard = () => {
                         />
                         
                         <MetricCard 
-                            title="Customer Sessions" 
-                            value={(data?.metrics?.customers?.current ?? 0).toLocaleString()}
-                            icon={<Users className="h-5 w-5" />}
-                            change={data?.metrics?.customers?.change ?? 0}
+                            title="Most Popular Table" 
+                            value={data?.metrics?.most_ordered_table?.current?.table_number ?? 'N/A'}
+                            icon={<Table className="h-5 w-5" />} // Changed icon from Users to Table
+                            subtitle={`${data?.metrics?.most_ordered_table?.current?.order_count ?? 0} orders served`}
                             loading={loading}
                             color="bg-gradient-to-br from-orange-500/10 to-orange-500/5"
                             iconColor="text-orange-500"
-                            subtitle="unique tables/deliveries"
                         />
                     </div>
 
@@ -605,15 +622,22 @@ const BranchDashboard = () => {
                                     <div>
                                         <div className="grid grid-cols-8 md:grid-cols-12 lg:grid-cols-24 gap-1 mb-6">
                                             {data.heatmap_data.map((hourData, index) => (
-                                                <div key={index} className="flex flex-col items-center">
+                                            <div key={index} className="flex flex-col items-center">
+                                                <Tippy 
+                                                    content={`${hourData.hour}: ${hourData.order_count} orders, ${formatCurrency(hourData.revenue)}`}
+                                                    placement="top"
+                                                    arrow={true}
+                                                    animation="fade"
+                                                >
                                                     <div 
-                                                        className={`w-full h-8 rounded ${getHeatmapColor(hourData.intensity)} transition-all duration-300 hover:scale-105 cursor-help`}
-                                                        title={`${hourData.hour}: ${hourData.order_count} orders, ${formatCurrency(hourData.revenue)}`}
+                                                        className={`w-full h-8 rounded ${getHeatmapColor(hourData.intensity)} transition-all duration-300 hover:scale-105 cursor-help`} 
                                                     />
-                                                    <span className="text-xs mt-1 text-muted-foreground">
-                                                        {hourData.hour.split(':')[0]}
-                                                    </span>
-                                                </div>
+                                                </Tippy>
+                                                
+                                                <span className="text-xs mt-1 text-muted-foreground">
+                                                    {hourData.hour.split(':')[0]}
+                                                </span>
+                                            </div>
                                             ))}
                                         </div>
                                         
@@ -781,6 +805,60 @@ const BranchDashboard = () => {
                             ) : (
                                 <div className="h-[200px] flex items-center justify-center text-muted-foreground">
                                     No order type data available
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                   <TabsContent value="recentOrder" className="space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Recent Orders</CardTitle>
+                            <CardDescription>
+                                Your recent orders history
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {loading ? (
+                                <div className="h-[200px] flex items-center justify-center">
+                                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                                </div>
+                            ) : data?.recent_orders?.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b">
+                                                <th className="text-left p-3">Order Number</th>
+                                                <th className="text-left p-3">Total</th>
+                                                <th className="text-left p-3">Time</th>
+                                                <th className="text-left p-3">Order Type</th>
+                                                <th className="text-left p-3">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {data.recent_orders.map((order, index) => (
+                                                <tr key={index} className="border-b hover:bg-muted/50">
+                                                    <td className="p-3 font-medium">{order.order_number}</td>
+                                                    <td className="p-3">${order.total}</td>
+                                                    <td className="p-3">{order.time}</td>
+                                                    <td className="p-3"><OrderTypeBadge order={order} /></td> 
+                                                    <td className='p-3' >
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={`${getStatusClasses(order.status)}  font-medium`}>     
+                                                            {STATUS_CONFIG[order.status]?.label}
+                                                        </Badge>
+                                                    </td>
+                                                </tr>
+                                                
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                                    No product data available
                                 </div>
                             )}
                         </CardContent>

@@ -8,12 +8,77 @@ export const ORDER_STATUS = {
     CANCELLED: 'cancelled'    // Order voided
 };
 
-export const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
-    [ORDER_STATUS.PENDING]: { color: 'bg-amber-500', label: 'Pending' },
-    [ORDER_STATUS.CONFIRMED]: { color: 'bg-blue-500', label: 'Confirmed' },
-    [ORDER_STATUS.COOKING]: { color: 'bg-orange-500', label: 'Cooking' },
-    [ORDER_STATUS.READY]: { color: 'bg-green-500', label: 'Ready' },
-    [ORDER_STATUS.IN_SERVICE]: { color: 'bg-purple-600', label: 'In Service' },
-    [ORDER_STATUS.PAID]: { color: 'bg-slate-600', label: 'Paid' },
-    [ORDER_STATUS.CANCELLED]: { color: 'bg-red-600', label: 'Cancelled' },
+export const STATUS_CONFIG: Record<string, { 
+    bg: string; 
+    border: string; 
+    text: string;
+    darkBg: string;
+    darkBorder: string;
+    darkText: string;
+    label: string;
+}> = {
+    [ORDER_STATUS.PENDING]: { 
+        bg: 'bg-amber-50',
+        border: 'border-amber-300',
+        text: 'text-amber-700',
+        darkBg: 'dark:bg-amber-950',
+        darkBorder: 'dark:border-amber-700',
+        darkText: 'dark:text-amber-300',
+        label: 'Pending'
+    },
+    [ORDER_STATUS.CONFIRMED]: { 
+        bg: 'bg-blue-50',
+        border: 'border-blue-300',
+        text: 'text-blue-700',
+        darkBg: 'dark:bg-blue-950',
+        darkBorder: 'dark:border-blue-700',
+        darkText: 'dark:text-blue-300',
+        label: 'Confirmed'
+    },
+    [ORDER_STATUS.COOKING]: { 
+        bg: 'bg-orange-50',
+        border: 'border-orange-300',
+        text: 'text-orange-700',
+        darkBg: 'dark:bg-orange-950',
+        darkBorder: 'dark:border-orange-700',
+        darkText: 'dark:text-orange-300',
+        label: 'Cooking'
+    },
+    [ORDER_STATUS.READY]: { 
+        bg: 'bg-green-50',
+        border: 'border-green-300',
+        text: 'text-green-700',
+        darkBg: 'dark:bg-green-950',
+        darkBorder: 'dark:border-green-700',
+        darkText: 'dark:text-green-300',
+        label: 'Ready'
+    },
+    [ORDER_STATUS.IN_SERVICE]: { 
+        bg: 'bg-purple-50',
+        border: 'border-purple-300',
+        text: 'text-purple-700',
+        darkBg: 'dark:bg-purple-950',
+        darkBorder: 'dark:border-purple-700',
+        darkText: 'dark:text-purple-300',
+        label: 'In Service'
+    },
+    [ORDER_STATUS.PAID]: { 
+        bg: 'bg-slate-50',
+        border: 'border-slate-300',
+        text: 'text-slate-700',
+        darkBg: 'dark:bg-slate-950',
+        darkBorder: 'dark:border-slate-700',
+        darkText: 'dark:text-slate-300',
+        label: 'Paid'
+    },
+    [ORDER_STATUS.CANCELLED]: { 
+        bg: 'bg-red-50',
+        border: 'border-red-300',
+        text: 'text-red-700',
+        darkBg: 'dark:bg-red-950',
+        darkBorder: 'dark:border-red-700',
+        darkText: 'dark:text-red-300',
+        label: 'Cancelled'
+    },
 };
+

@@ -36,7 +36,7 @@ export const ProductCard = ({ product, onConfigure }: ProductCardProps) => {
 
   return (
     <Card 
-      className="group cursor-pointer overflow-hidden border-border/40 bg-card hover:border-primary/30 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+      className="group cursor-pointer overflow-hidden border-border/40 bg-card hover:border-primary/30 hover:shadow-lg transition-all duration-300 hover:scale-[1] active:scale-[0.98]"
       onClick={() => onConfigure(product)}
     >
       {/* Top Ribbon - Feature Badges */}

@@ -66,7 +66,7 @@ public function index(Request $request, $branch)
             'sort_order' => 'nullable|integer|min:0',
             'is_available' => 'nullable|boolean',
             'discount_percentage' => 'nullable|integer|min:0|max:100',
-            'has_active_discount' => 'nullable|boolean', // Added validation
+            'has_active_discount' => 'nullable|boolean', 
             'is_popular' => 'nullable|boolean',
             'is_signature' => 'nullable|boolean',
             'is_chef_recommendation' => 'nullable|boolean',

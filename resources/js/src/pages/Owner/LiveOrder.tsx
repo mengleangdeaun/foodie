@@ -493,10 +493,17 @@ const AdminLiveDashboard = () => {
                         });
                     }
                 })
-                .listen('.order.updated', (data: { order: Order }) => {
-                    setOrders(prev => prev.map(o => o.id === data.order.id ? data.order : o));
-                });
+            .listen('.order.updated', (data: { order: Order }) => {
+                const updatedLabel = getOrderDisplayLabel(data.order);
 
+                setOrders(prev =>
+                    prev.map(o =>
+                        getOrderDisplayLabel(o) === updatedLabel
+                            ? data.order
+                            : o
+                    )
+                );
+            });
             return () => window.Echo.leave(channel);
         }
     }, [user?.branch_id, date, fetchLiveOrders, notificationsMuted, toast]);

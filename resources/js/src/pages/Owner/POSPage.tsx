@@ -723,7 +723,7 @@ const scrollTabs = (direction: 'left' | 'right') => {
                         id="popular-filter"
                         className="data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500 dark:data-[state=checked]:bg-amber-600"
                     />
-                    <Label htmlFor="popular-filter" className="flex items-center gap-2 cursor-pointer hover:text-foreground/80 transition-colors">
+                    <Label htmlFor="popular-filter" className="mb-0 flex items-center gap-2 cursor-pointer hover:text-foreground/80 transition-colors">
                         <Star size={14} className="text-amber-500 dark:text-amber-400" fill="currentColor" />
                         <span className="text-sm font-medium">Popular</span>
                     </Label>
@@ -736,7 +736,7 @@ const scrollTabs = (direction: 'left' | 'right') => {
                         id="signature-filter"
                         className="data-[state=checked]:bg-rose-600 data-[state=checked]:border-rose-600 dark:data-[state=checked]:bg-rose-700"
                     />
-                    <Label htmlFor="signature-filter" className="flex items-center gap-2 cursor-pointer hover:text-foreground/80 transition-colors">
+                    <Label htmlFor="signature-filter" className="mb-0 flex items-center gap-2 cursor-pointer hover:text-foreground/80 transition-colors">
                         <Award size={14} className="text-rose-600 dark:text-rose-400" />
                         <span className="text-sm font-medium">Signature</span>
                     </Label>
@@ -749,16 +749,17 @@ const scrollTabs = (direction: 'left' | 'right') => {
                         id="chef-filter"
                         className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 dark:data-[state=checked]:bg-emerald-700"
                     />
-                    <Label htmlFor="chef-filter" className="flex items-center gap-2 cursor-pointer hover:text-foreground/80 transition-colors">
+                    <Label htmlFor="chef-filter" className="mb-0 flex items-center gap-2 cursor-pointer hover:text-foreground/80 transition-colors">
                         <ChefHat size={14} className="text-emerald-600 dark:text-emerald-400" />
                         <span className="text-sm font-medium">Chef's Pick</span>
                     </Label>
                 </div>
                 
                 {(showPopular || showSignature || showChefPick) && (
+                
                     <Button 
                         variant="ghost" 
-                        size="sm" 
+                        size="xs" 
                         onClick={() => {
                             setShowPopular(false);
                             setShowSignature(false);
@@ -766,7 +767,7 @@ const scrollTabs = (direction: 'left' | 'right') => {
                         }}
                         className="ml-auto text-muted-foreground hover:text-foreground hover:bg-transparent"
                     >
-                        <X size={14} className="mr-1.5" />
+                        <X size={8} className="mr-1.5" />
                         Clear filters
                     </Button>
                 )}
@@ -988,7 +989,7 @@ const scrollTabs = (direction: 'left' | 'right') => {
                     </div>
                     
                     {/* Order Type */}
-                    <div className="p-3 grid grid-cols-2 gap-2">
+                    <div className="p-4 grid grid-cols-2 gap-2">
                         <Button 
                             variant={orderType === 'walk_in' ? 'default' : 'outline'} 
                             className="h-11 font-medium" 
@@ -1019,7 +1020,7 @@ const scrollTabs = (direction: 'left' | 'right') => {
                                     <Badge 
                                         key={p.id} 
                                         variant={selectedPartner?.id === p.id ? "default" : "outline"}
-                                        className="cursor-pointer px-3 py-1.5 font-medium hover:bg-primary/10 transition-colors"
+                                        className="cursor-pointer px-3 py-1.5 font-medium hover:bg-primary transition-colors"
                                         onClick={() => setSelectedPartner(p)}
                                     >
                                         {p.name}

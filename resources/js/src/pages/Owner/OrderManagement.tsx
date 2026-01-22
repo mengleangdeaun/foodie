@@ -52,6 +52,7 @@ import ThermalReceipt from '@/components/printing/ThermalReceipt';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 
+
 const OrderManagement = () => {
     const { user } = useAuth();
     const { toast } = useToast();
@@ -370,6 +371,13 @@ const OrderManagement = () => {
         }
     };
 
+    const getStatusClasses = (status: string): string => {
+        const config = STATUS_CONFIG[status];
+        if (!config) return '';
+        
+        return `${config.bg} ${config.border} ${config.text} ${config.darkBg} ${config.darkBorder} ${config.darkText} border-2`;
+    };
+
     const filteredOrders = selectedTab === 'all'
         ? orders
         : orders.filter(order => order.status === selectedTab);
@@ -378,7 +386,7 @@ const OrderManagement = () => {
     const endIndex = Math.min(currentPage * parseInt(perPage), totalOrders);
 
     return (
-        <div className="container mx-auto px-4 py-6">
+        <div className="space-y-6">
             {/* Header */}
             <div className="mb-8">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
@@ -560,16 +568,7 @@ const OrderManagement = () => {
                                                 {order.order_code || `#${order.id}`}
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium">
-                                                        {order.customer_name || 'Walk-in Customer'}
-                                                    </span>
-                                                    {order.table_number && (
-                                                        <span className="text-xs text-slate-500">
-                                                            Table {order.table_number}
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                    <OrderTypeBadge order={order} />
                                             </TableCell>
                                             <TableCell>
                                                 <div className="max-w-[200px]">
@@ -597,15 +596,11 @@ const OrderManagement = () => {
                                                 ${parseFloat(order.total || 0).toFixed(2)}
                                             </TableCell>
                                             <TableCell>
-                                                <Badge
-                                                    variant="outline"
-                                                    className={cn(
-                                                        "border-0 text-white",
-                                                        STATUS_CONFIG[order.status]?.color || "bg-slate-500"
-                                                    )}
-                                                >
-                                                    {STATUS_CONFIG[order.status]?.label || order.status}
-                                                </Badge>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={`${getStatusClasses(order.status)}  font-medium`}>     
+                                                            {STATUS_CONFIG[order.status]?.label}
+                                                        </Badge>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex flex-col">

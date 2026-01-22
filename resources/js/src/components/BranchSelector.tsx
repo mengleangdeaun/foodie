@@ -54,12 +54,12 @@ const BranchSelector = () => {
                 <Store size={16} className="text-primary" />
             </div>
             <Select value={user?.branch_id?.toString()} onValueChange={handleBranchSwitch} disabled={loading}>
-                <SelectTrigger className="w-[200px] border-none bg-transparent focus:ring-0 font-bold uppercase italic tracking-tighter">
+                <SelectTrigger className="w-[200px] border-none bg-transparent focus:ring-0 font-bold uppercase tracking-tighter">
                     {loading ? <RefreshCw className="animate-spin h-4 w-4" /> : <SelectValue placeholder="Select Branch" />}
                 </SelectTrigger>
                 <SelectContent>
                     {branches.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id.toString()} className="font-bold uppercase italic">
+                        <SelectItem key={branch.id} value={branch.id.toString()} className="font-bold uppercase">
                             {/* FIX: Must use 'branch_name' to match your SQL */}
                             {branch.branch_name} 
                         </SelectItem>

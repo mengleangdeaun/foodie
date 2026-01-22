@@ -137,7 +137,7 @@ const switchBranch = async (branchId: number) => {
                                     btnClassName="flex items-center gap-2 p-2 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"
                                     button={
                                         <>
-                                            <span className="text-xs font-black uppercase italic tracking-tighter hidden md:block">
+                                            <span className="text-xs font-black uppercase tracking-tighter hidden md:block">
                                                 {user?.branch?.branch_name || 'Select Branch'}
                                             </span>
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -27,7 +27,6 @@ class BranchProductSizeApiController extends Controller
                 return response()->json(['error' => 'Unauthenticated'], 401);
             }
             
-            // Find the branch - check by ID first, then try to find by owner_id
             $branch = null;
             
             // If user is super_admin, find any branch

@@ -55,7 +55,7 @@ const Sidebar = () => {
 
                             {['owner', 'manager', 'chef'].includes(user?.role || '') && (
                                     <>
-                                        <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1 text-primary text-[11px] ">
+                                        <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1 text-[11px] ">
                                             <span>{t('Kitchen Display')}</span>
                                         </h2>
                                         <li className="menu nav-item">
@@ -71,7 +71,7 @@ const Sidebar = () => {
                             {/* --- SUPER ADMIN SECTION --- */}
                             {role === 'super_admin' && (
                                 <>
-                                    <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1 text-primary text-[11px]">
+                                    <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1  text-[11px]">
                                         <span>{t('SaaS Management')}</span>
                                     </h2>
                                     <li className="menu nav-item">

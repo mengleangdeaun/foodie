@@ -133,7 +133,7 @@ const BranchInventory = () => {
             
             toast({ 
                 title: "Success", 
-                description: "Product settings have been updated." 
+                description: "Product have been updated." 
             });
         } catch (error: any) {
             toast({ 
@@ -402,7 +402,7 @@ const BranchInventory = () => {
                     <div className="flex items-center gap-4 p-2 rounded-md border bg-muted/20">
                         <div className="flex items-center gap-2">
                             <Percent className="h-4 w-4 text-primary" />
-                            <Label htmlFor="on-promo" className="text-sm cursor-pointer">
+                            <Label htmlFor="on-promo" className="mb-0 text-sm cursor-pointer">
                                 On Discount
                             </Label>
                         </div>
@@ -419,7 +419,7 @@ const BranchInventory = () => {
                     <div className="flex items-center gap-4 p-2 rounded-md border bg-muted/20">
                         <div className="flex items-center gap-2">
                             <Ruler className="h-4 w-4 text-muted-foreground" />
-                            <Label htmlFor="multi-size" className="text-sm cursor-pointer">
+                            <Label htmlFor="multi-size" className="mb-0 text-sm cursor-pointer">
                                 Multi-Size Only
                             </Label>
                         </div>
@@ -436,7 +436,7 @@ const BranchInventory = () => {
                     <div className="flex items-center gap-4 p-2 rounded-md border bg-muted/20">
                         <div className="flex items-center gap-2">
                             <EyeOff className="h-4 w-4 text-muted-foreground" />
-                            <Label htmlFor="unavailable" className="text-sm cursor-pointer">
+                            <Label htmlFor="unavailable" className="mb-0 text-sm cursor-pointer">
                                 Unavailable Only
                             </Label>
                         </div>

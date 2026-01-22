@@ -16,7 +16,6 @@ class BranchDashboardController extends Controller {
     public function index(Request $request) {
         $branchId = Auth::user()->branch_id;
         
-        // Parse date range from frontend with validation
         $request->validate([
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
@@ -27,23 +26,18 @@ class BranchDashboardController extends Controller {
         $startDate = Carbon::parse($request->start_date)->startOfDay();
         $endDate = Carbon::parse($request->end_date)->endOfDay();
         
-        // Combine date and time if provided
         if ($request->has('start_time') && $request->has('end_time')) {
             $start = Carbon::parse($request->start_date . ' ' . $request->start_time);
             $end = Carbon::parse($request->end_date . ' ' . $request->end_time);
             
-            // Validate time range doesn't exceed 30 days
             if ($start->diffInDays($end) > 30) {
-                return response()->json([
-                    'error' => 'Time range cannot exceed 30 days'
-                ], 400);
+                return response()->json(['error' => 'Time range cannot exceed 30 days'], 400);
             }
         } else {
             $start = $startDate;
             $end = $endDate;
         }
 
-        // Previous period for comparison (same duration)
         $duration = $start->diffInDays($end);
         $previousStart = $start->copy()->subDays($duration);
         $previousEnd = $end->copy()->subDays($duration);
@@ -57,41 +51,26 @@ class BranchDashboardController extends Controller {
             ->whereBetween('created_at', [$previousStart, $previousEnd])
             ->where('status', 'paid');
 
-        // Calculate unique customers
-        // Since we don't store customer info, we'll count unique orders with different criteria:
-        // 1. For walk-in: Count distinct restaurant tables
-        // 2. For delivery: Count as separate customers (each order treated as unique)
-        // 3. For all: Count distinct user_ids (if available)
-        
-        $currentCustomers = Order::where('branch_id', $branchId)
+        // --- NEW: Most Ordered Table ID Logic ---
+        $currentMostOrderedTable = Order::where('branch_id', $branchId)
             ->whereBetween('created_at', [$start, $end])
             ->where('status', 'paid')
-            ->select(DB::raw('
-                COUNT(DISTINCT CASE 
-                    WHEN order_type = "walk_in" AND restaurant_table_id IS NOT NULL 
-                    THEN restaurant_table_id 
-                    WHEN order_type = "delivery" 
-                    THEN id 
-                    ELSE user_id 
-                END) as unique_customers
-            '))
-            ->first()
-            ->unique_customers;
+            ->whereNotNull('restaurant_table_id')
+            ->select('restaurant_table_id', DB::raw('COUNT(*) as order_count'))
+            ->with('restaurantTable:id,table_number')
+            ->groupBy('restaurant_table_id')
+            ->orderBy('order_count', 'desc')
+            ->first();
 
-        $previousCustomers = Order::where('branch_id', $branchId)
+        $previousMostOrderedTable = Order::where('branch_id', $branchId)
             ->whereBetween('created_at', [$previousStart, $previousEnd])
             ->where('status', 'paid')
-            ->select(DB::raw('
-                COUNT(DISTINCT CASE 
-                    WHEN order_type = "walk_in" AND restaurant_table_id IS NOT NULL 
-                    THEN restaurant_table_id 
-                    WHEN order_type = "delivery" 
-                    THEN id 
-                    ELSE user_id 
-                END) as unique_customers
-            '))
-            ->first()
-            ->unique_customers;
+            ->whereNotNull('restaurant_table_id')
+            ->select('restaurant_table_id', DB::raw('COUNT(*) as order_count'))
+            ->with('restaurantTable:id,table_number')
+            ->groupBy('restaurant_table_id')
+            ->orderBy('order_count', 'desc')
+            ->first();
 
         // Current period metrics
         $currentRevenue = $currentOrdersQuery->sum('total');
@@ -107,14 +86,13 @@ class BranchDashboardController extends Controller {
         $revenueChange = $this->calculatePercentageChange($currentRevenue, $previousRevenue);
         $ordersChange = $this->calculatePercentageChange($currentOrders, $previousOrders);
         $aovChange = $this->calculatePercentageChange($currentAOV, $previousAOV);
-        $customersChange = $this->calculatePercentageChange($currentCustomers, $previousCustomers);
 
-        // Top Selling Products with revenue
+        // Top Selling Products
         $topSelling = OrderItem::whereIn('order_id', $currentOrdersQuery->pluck('id'))
             ->select(
                 'product_id',
                 DB::raw('SUM(quantity) as total_qty'),
-                DB::raw('SUM(quantity * price) as total_revenue')
+                DB::raw('SUM(quantity * final_unit_price) as total_revenue')
             )
             ->with('product:id,name')
             ->groupBy('product_id')
@@ -130,14 +108,14 @@ class BranchDashboardController extends Controller {
                 ];
             });
 
-        // Revenue by Category with percentage
+        // Category Revenue
         $categoryRevenue = OrderItem::whereIn('order_id', $currentOrdersQuery->pluck('id'))
             ->join('products', 'order_items.product_id', '=', 'products.id')
             ->join('categories', 'products.category_id', '=', 'categories.id')
             ->select(
                 'categories.id as category_id',
                 'categories.name as category_name',
-                DB::raw('SUM(order_items.price * order_items.quantity) as revenue'),
+                DB::raw('SUM(order_items.final_unit_price * order_items.quantity) as revenue'),
                 DB::raw('COUNT(DISTINCT order_items.order_id) as order_count')
             )
             ->groupBy('categories.id', 'categories.name')
@@ -154,7 +132,7 @@ class BranchDashboardController extends Controller {
                 ];
             });
 
-        // Hourly Heatmap Data (busy hours)
+        // Hourly Heatmap Data
         $hourlyData = Order::where('branch_id', $branchId)
             ->whereBetween('created_at', [$start, $end])
             ->where('status', 'paid')
@@ -168,7 +146,6 @@ class BranchDashboardController extends Controller {
             ->orderBy('hour')
             ->get();
 
-        // Prepare heatmap data for 24 hours
         $heatmapData = [];
         for ($hour = 0; $hour < 24; $hour++) {
             $hourData = $hourlyData->firstWhere('hour', $hour);
@@ -182,18 +159,15 @@ class BranchDashboardController extends Controller {
             ];
         }
 
-        // Peak hour calculation
         $peakHour = $hourlyData->sortByDesc('order_count')->first();
         $peakHourValue = $peakHour ? sprintf("%02d:00", $peakHour->hour) : 'N/A';
 
-        // Average preparation time
         $avgPrepTime = Order::where('branch_id', $branchId)
             ->whereBetween('created_at', [$start, $end])
             ->where('status', 'paid')
             ->whereNotNull('actual_prep_duration')
             ->avg('actual_prep_duration');
 
-        // Order type distribution
         $orderTypeDistribution = Order::where('branch_id', $branchId)
             ->whereBetween('created_at', [$start, $end])
             ->where('status', 'paid')
@@ -214,50 +188,60 @@ class BranchDashboardController extends Controller {
                 ];
             });
 
-        // Recent orders with details
-        $recentOrders = Order::where('branch_id', $branchId)
-            ->whereBetween('created_at', [$start, $end])
-            ->with(['items', 'restaurantTable', 'deliveryPartner', 'user'])
-            ->orderBy('created_at', 'desc')
-            ->take(10)
-            ->get()
-            ->map(function ($order) {
-                return [
-                    'id' => $order->id,
-                    'order_number' => 'ORD-' . str_pad($order->id, 6, '0', STR_PAD_LEFT),
-                    'total' => (float) $order->total,
-                    'item_count' => $order->items->count(),
-                    'time' => $order->created_at->format('H:i'),
-                    'date' => $order->created_at->format('M d, Y'),
-                    'status' => $order->status,
-                    'order_type' => $order->order_type,
-                    'table_number' => $order->restaurantTable?->table_number,
-                    'delivery_partner' => $order->deliveryPartner?->name,
-                    'customer_name' => $order->user?->name ?? ($order->order_type === 'walk_in' ? 'Walk-in Customer' : 'Delivery Customer')
-                ];
-            });
+            $recentOrders = Order::where('branch_id', $branchId)
+                ->whereBetween('created_at', [$start, $end])
+                ->with(['items', 'restaurantTable', 'deliveryPartner', 'user'])
+                ->orderBy('created_at', 'desc')
+                ->take(10)
+                ->get()
+                ->map(function ($order) {
+                    return [
+                        'id' => $order->id,
+                       
+                        'order_number' => $order->order_code ?? 'ORD-' . str_pad($order->id, 6, '0', STR_PAD_LEFT),
+                        'total' => (float) $order->total,
+                        'item_count' => $order->items->count(),
+                        'time' => $order->created_at->format('H:i'),
+                        'date' => $order->created_at->format('M d, Y'),
+                        'status' => $order->status,
+                        'order_type' => $order->order_type,
+                        
+                
+                        'restaurant_table' => $order->restaurantTable ? [
+                            'id' => $order->restaurantTable->id,
+                            'table_number' => $order->restaurantTable->table_number,
+                        ] : null,
 
-        // Top modifiers (most frequently selected)
+                        'delivery_partner' => $order->deliveryPartner ? [
+                            'id' => $order->deliveryPartner->id,
+                            'name' => $order->deliveryPartner->name,
+                        ] : null,
+                    ];
+                });
+
         $topModifiers = OrderItem::whereIn('order_id', $currentOrdersQuery->pluck('id'))
-            ->whereNotNull('selected_modifiers')
-            ->select('selected_modifiers')
-            ->get()
-            ->flatMap(function ($item) {
-                $modifiers = json_decode($item->selected_modifiers, true);
-                return is_array($modifiers) ? $modifiers : [];
-            })
-            ->groupBy('id')
-            ->map(function ($group, $modifierId) {
-                return [
-                    'id' => $modifierId,
-                    'name' => $group->first()['name'] ?? 'Unknown',
-                    'count' => $group->count(),
-                    'total_price' => $group->sum('price')
-                ];
-            })
-            ->sortByDesc('count')
-            ->take(5)
-            ->values();
+                    ->whereNotNull('selected_modifiers')
+                    ->select('selected_modifiers')
+                    ->get()
+                    ->flatMap(function ($item) {
+                        $modifiers = $item->selected_modifiers;
+                        if (is_string($modifiers)) {
+                            $modifiers = json_decode($modifiers, true);
+                        }
+                        return is_array($modifiers) ? $modifiers : [];
+                    })
+                    ->groupBy('id')
+                    ->map(function ($group, $modifierId) {
+                        return [
+                            'id' => $modifierId,
+                            'name' => $group->first()['name'] ?? 'Unknown',
+                            'count' => $group->count(),
+                            'total_price' => $group->sum('price')
+                        ];
+                    })
+                    ->sortByDesc('count')
+                    ->take(5)
+                    ->values();
 
         return response()->json([
             'metrics' => [
@@ -276,15 +260,22 @@ class BranchDashboardController extends Controller {
                     'previous' => round($previousAOV, 2),
                     'change' => $aovChange
                 ],
-                'customers' => [
-                    'current' => $currentCustomers,
-                    'previous' => $previousCustomers,
-                    'change' => $customersChange
+                // --- Updated: Most Ordered Table Stats ---
+                'most_ordered_table' => [
+                    'current' => [
+                        'id' => $currentMostOrderedTable?->restaurant_table_id,
+                        'table_number' => $currentMostOrderedTable?->restaurantTable?->table_number ?? 'N/A',
+                        'order_count' => $currentMostOrderedTable?->order_count ?? 0
+                    ],
+                    'previous' => [
+                        'id' => $previousMostOrderedTable?->restaurant_table_id,
+                        'table_number' => $previousMostOrderedTable?->restaurantTable?->table_number ?? 'N/A',
+                        'order_count' => $previousMostOrderedTable?->order_count ?? 0
+                    ]
                 ],
                 'peak_hour' => $peakHourValue,
                 'avg_prep_time' => $avgPrepTime ? round($avgPrepTime) : null,
-                'total_items_sold' => OrderItem::whereIn('order_id', $currentOrdersQuery->pluck('id'))
-                    ->sum('quantity'),
+                'total_items_sold' => OrderItem::whereIn('order_id', $currentOrdersQuery->pluck('id'))->sum('quantity'),
                 'order_types' => $orderTypeDistribution
             ],
             'top_selling' => $topSelling,
@@ -295,27 +286,19 @@ class BranchDashboardController extends Controller {
             'date_range' => [
                 'start' => $start->toDateTimeString(),
                 'end' => $end->toDateTimeString(),
-                'start_date' => $start->format('Y-m-d'),
-                'end_date' => $end->format('Y-m-d'),
-                'start_time' => $request->has('start_time') ? $request->start_time : null,
-                'end_time' => $request->has('end_time') ? $request->end_time : null,
                 'human_readable' => $this->getHumanReadableDateRange($start, $end, $request->has('start_time'))
             ]
         ]);
     }
 
     private function calculatePercentageChange($current, $previous) {
-        if ($previous == 0) {
-            return $current > 0 ? 100 : 0;
-        }
+        if ($previous == 0) return $current > 0 ? 100 : 0;
         return round((($current - $previous) / $previous) * 100, 1);
     }
 
     private function calculateIntensity($value, $max) {
         if ($max == 0) return 0;
         $intensity = ($value / $max) * 100;
-        
-        // Return intensity level 0-4 for styling
         if ($intensity == 0) return 0;
         if ($intensity <= 25) return 1;
         if ($intensity <= 50) return 2;
@@ -324,16 +307,10 @@ class BranchDashboardController extends Controller {
     }
 
     private function getHumanReadableDateRange($start, $end, $hasTime = false) {
-        if ($hasTime) {
-            return $start->format('M d, Y H:i') . ' - ' . $end->format('M d, Y H:i');
-        }
-        
-        if ($start->isSameDay($end)) {
-            return $start->format('M d, Y');
-        }
-        
-        return $start->format('M d, Y') . ' - ' . $end->format('M d, Y');
+        if ($hasTime) return $start->format('M d, Y H:i') . ' - ' . $end->format('M d, Y H:i');
+        return $start->isSameDay($end) ? $start->format('M d, Y') : $start->format('M d, Y') . ' - ' . $end->format('M d, Y');
     }
+
 
     // Additional endpoint for real-time updates
     public function realtime(Request $request) {

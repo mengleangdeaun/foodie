@@ -20,6 +20,7 @@ class ModifierController extends Controller
         
         $groups = ModifierGroup::where('owner_id', $ownerId)
             ->with('modifiers')
+            ->withCount('products')  // ADD THIS LINE
             ->latest()
             ->get();
 
