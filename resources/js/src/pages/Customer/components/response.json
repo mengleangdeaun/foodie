@@ -1,0 +1,648 @@
+{
+    "branch": {
+        "id": 1,
+        "owner_id": 1,
+        "branch_name": "Lotus Food ITC",
+        "branch_slug": "lotus-food-main",
+        "location": "Russian Boulouvard",
+        "is_active": 1,
+        "requires_cancel_note": 0,
+        "telegram_bot_token": "8442661211:AAFzM4VDdj8P4tVl_4tuFMMQjVDsQUCjX5w",
+        "telegram_bot_name": "dgs_report_maker_bot",
+        "telegram_chat_id": "-1003598759063",
+        "telegram_topic_id": null,
+        "created_at": "2026-01-05T03:25:27.000000Z",
+        "updated_at": "2026-01-15T06:21:59.000000Z",
+        "logo_path": "branch_logos\/DLpTGN6uA5y5NtlbliU5pF97z6zI09LqfP2nvZHX.png",
+        "primary_color": "#10b981",
+        "secondary_color": "#10b981",
+        "accent_color": "#f59e0b",
+        "font_family": "font-dangrek",
+        "font_family_headings": "font-kantumruy",
+        "banner_image": null,
+        "opening_days": "Mon-Sun",
+        "opening_time": "10:00:00",
+        "closing_time": "21:00:00",
+        "contact_phone": "0975450540",
+        "contact_email": "lotusfood@gmail.com",
+        "qr_payment_path": "branch_qrs\/7dIIJh5i017qnnE0JQ8JjFKCt7QHJb4OOC5NGbaU.png",
+        "tax_rate": "25.00",
+        "tax_is_active": 1,
+        "tax_name": "VAT"
+    },
+    "table_number": "01",
+    "categories": [
+        {
+            "id": 1,
+            "owner_id": 1,
+            "name": "Food",
+            "slug": "food-1",
+            "sort_order": 0,
+            "is_active": 1,
+            "created_at": "2026-01-05T03:34:59.000000Z",
+            "updated_at": "2026-01-05T03:34:59.000000Z",
+            "remark_presets": [
+                {
+                    "id": 1,
+                    "owner_id": 2,
+                    "name": "Sugar Level",
+                    "options": [
+                        "0 %",
+                        "20 %",
+                        "50 %",
+                        "70 %",
+                        "100 %"
+                    ],
+                    "type": "multiple",
+                    "is_required": 1,
+                    "created_at": "2026-01-08T23:28:12.000000Z",
+                    "updated_at": "2026-01-10T17:17:54.000000Z",
+                    "pivot": {
+                        "category_id": 1,
+                        "remark_preset_id": 1
+                    }
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "owner_id": 1,
+            "name": "Drink",
+            "slug": "drink-1",
+            "sort_order": 0,
+            "is_active": 1,
+            "created_at": "2026-01-05T03:35:02.000000Z",
+            "updated_at": "2026-01-05T03:35:02.000000Z",
+            "remark_presets": [
+                {
+                    "id": 1,
+                    "owner_id": 2,
+                    "name": "Sugar Level",
+                    "options": [
+                        "0 %",
+                        "20 %",
+                        "50 %",
+                        "70 %",
+                        "100 %"
+                    ],
+                    "type": "multiple",
+                    "is_required": 1,
+                    "created_at": "2026-01-08T23:28:12.000000Z",
+                    "updated_at": "2026-01-10T17:17:54.000000Z",
+                    "pivot": {
+                        "category_id": 2,
+                        "remark_preset_id": 1
+                    }
+                }
+            ]
+        },
+        {
+            "id": 3,
+            "owner_id": 1,
+            "name": "Snack",
+            "slug": "snack-1",
+            "sort_order": 0,
+            "is_active": 1,
+            "created_at": "2026-01-05T21:18:51.000000Z",
+            "updated_at": "2026-01-05T21:18:51.000000Z",
+            "remark_presets": [
+                {
+                    "id": 1,
+                    "owner_id": 2,
+                    "name": "Sugar Level",
+                    "options": [
+                        "0 %",
+                        "20 %",
+                        "50 %",
+                        "70 %",
+                        "100 %"
+                    ],
+                    "type": "multiple",
+                    "is_required": 1,
+                    "created_at": "2026-01-08T23:28:12.000000Z",
+                    "updated_at": "2026-01-10T17:17:54.000000Z",
+                    "pivot": {
+                        "category_id": 3,
+                        "remark_preset_id": 1
+                    }
+                }
+            ]
+        },
+        {
+            "id": 4,
+            "owner_id": 1,
+            "name": "Desert",
+            "slug": "desert-1",
+            "sort_order": 0,
+            "is_active": 1,
+            "created_at": "2026-01-05T21:18:57.000000Z",
+            "updated_at": "2026-01-05T21:18:57.000000Z",
+            "remark_presets": [
+                {
+                    "id": 1,
+                    "owner_id": 2,
+                    "name": "Sugar Level",
+                    "options": [
+                        "0 %",
+                        "20 %",
+                        "50 %",
+                        "70 %",
+                        "100 %"
+                    ],
+                    "type": "multiple",
+                    "is_required": 1,
+                    "created_at": "2026-01-08T23:28:12.000000Z",
+                    "updated_at": "2026-01-10T17:17:54.000000Z",
+                    "pivot": {
+                        "category_id": 4,
+                        "remark_preset_id": 1
+                    }
+                }
+            ]
+        },
+        {
+            "id": 5,
+            "owner_id": 1,
+            "name": "Main Course",
+            "slug": "main-course-1",
+            "sort_order": 0,
+            "is_active": 1,
+            "created_at": "2026-01-09T14:11:50.000000Z",
+            "updated_at": "2026-01-09T14:11:50.000000Z",
+            "remark_presets": [
+                {
+                    "id": 1,
+                    "owner_id": 2,
+                    "name": "Sugar Level",
+                    "options": [
+                        "0 %",
+                        "20 %",
+                        "50 %",
+                        "70 %",
+                        "100 %"
+                    ],
+                    "type": "multiple",
+                    "is_required": 1,
+                    "created_at": "2026-01-08T23:28:12.000000Z",
+                    "updated_at": "2026-01-10T17:17:54.000000Z",
+                    "pivot": {
+                        "category_id": 5,
+                        "remark_preset_id": 1
+                    }
+                }
+            ]
+        }
+    ],
+    "products": [
+        {
+            "id": 5,
+            "name": "Iced Latte",
+            "category_id": 2,
+            "short_description": "mm",
+            "image_path": null,
+            "tags": [
+                {
+                    "id": 1,
+                    "owner_id": 1,
+                    "name": "Spicy",
+                    "icon_type": "heart",
+                    "color_type": "primary",
+                    "created_at": "2026-01-10T13:00:01.000000Z",
+                    "updated_at": "2026-01-10T13:14:55.000000Z",
+                    "pivot": {
+                        "product_id": 5,
+                        "tag_id": 1
+                    }
+                },
+                {
+                    "id": 2,
+                    "owner_id": 1,
+                    "name": "Healthy",
+                    "icon_type": "clock",
+                    "color_type": "danger",
+                    "created_at": "2026-01-10T13:02:51.000000Z",
+                    "updated_at": "2026-01-10T13:14:51.000000Z",
+                    "pivot": {
+                        "product_id": 5,
+                        "tag_id": 2
+                    }
+                }
+            ],
+            "sizes": [
+                {
+                    "id": 1,
+                    "name": "Regular",
+                    "base_price": 1.5,
+                    "final_price": 1.28,
+                    "discount_percentage": 15,
+                    "has_active_discount": true,
+                    "is_available": true,
+                    "price_source": "branch_product",
+                    "discount_source": "branch_size",
+                    "has_branch_product_size_record": true,
+                    "branch_product_id": 9,
+                    "branch_product_size_id": 9
+                },
+                {
+                    "id": 2,
+                    "name": "Medium",
+                    "base_price": 1.5,
+                    "final_price": 1.28,
+                    "discount_percentage": 15,
+                    "has_active_discount": true,
+                    "is_available": true,
+                    "price_source": "branch_product",
+                    "discount_source": "branch_size",
+                    "has_branch_product_size_record": true,
+                    "branch_product_id": 9,
+                    "branch_product_size_id": 8
+                },
+                {
+                    "id": 3,
+                    "name": "Large",
+                    "base_price": 1.5,
+                    "final_price": 0.68,
+                    "discount_percentage": 55,
+                    "has_active_discount": true,
+                    "is_available": true,
+                    "price_source": "branch_product",
+                    "discount_source": "branch_size",
+                    "has_branch_product_size_record": true,
+                    "branch_product_id": 9,
+                    "branch_product_size_id": 7
+                }
+            ],
+            "has_sizes": true,
+            "modifier_groups": [
+                {
+                    "id": 2,
+                    "name": "Spicy Level",
+                    "selection_type": "single",
+                    "min_selection": 0,
+                    "max_selection": 1,
+                    "modifiers": [
+                        {
+                            "id": 4,
+                            "name": "1",
+                            "price": 0
+                        },
+                        {
+                            "id": 5,
+                            "name": "2",
+                            "price": 0
+                        },
+                        {
+                            "id": 6,
+                            "name": "3",
+                            "price": 0
+                        },
+                        {
+                            "id": 7,
+                            "name": "4",
+                            "price": 0
+                        },
+                        {
+                            "id": 8,
+                            "name": "5",
+                            "price": 0
+                        },
+                        {
+                            "id": 9,
+                            "name": "6",
+                            "price": 0
+                        },
+                        {
+                            "id": 10,
+                            "name": "7",
+                            "price": 0
+                        }
+                    ]
+                },
+                {
+                    "id": 1,
+                    "name": "Extra Topping",
+                    "selection_type": "multiple",
+                    "min_selection": 1,
+                    "max_selection": 2,
+                    "modifiers": [
+                        {
+                            "id": 1,
+                            "name": "Egg",
+                            "price": 0.25
+                        },
+                        {
+                            "id": 3,
+                            "name": "Egg + Vige",
+                            "price": 1
+                        }
+                    ]
+                }
+            ],
+            "pricing": {
+                "product_base_price": 1.5,
+                "branch_product_price": 1.5,
+                "is_available": true,
+                "discount_percentage": 15,
+                "has_active_discount": true,
+                "effective_price": 1.275,
+                "is_popular": true,
+                "is_signature": false,
+                "is_chef_recommendation": false
+            }
+        },
+        {
+            "id": 1,
+            "name": "Lotus Coffee",
+            "category_id": 2,
+            "short_description": "Our Signature Drink",
+            "image_path": "\/storage\/products\/695c052366796.webp",
+            "tags": [],
+            "sizes": null,
+            "has_sizes": false,
+            "modifier_groups": [
+                {
+                    "id": 1,
+                    "name": "Extra Topping",
+                    "selection_type": "multiple",
+                    "min_selection": 1,
+                    "max_selection": 2,
+                    "modifiers": [
+                        {
+                            "id": 1,
+                            "name": "Egg",
+                            "price": 0.25
+                        },
+                        {
+                            "id": 3,
+                            "name": "Egg + Vige",
+                            "price": 1
+                        }
+                    ]
+                }
+            ],
+            "pricing": {
+                "product_base_price": 1.5,
+                "branch_product_price": 5,
+                "is_available": true,
+                "discount_percentage": 5,
+                "has_active_discount": true,
+                "effective_price": 4.75,
+                "is_popular": true,
+                "is_signature": true,
+                "is_chef_recommendation": true
+            }
+        },
+        {
+            "id": 3,
+            "name": "Passion Soda",
+            "category_id": 2,
+            "short_description": "f",
+            "image_path": "\/storage\/products\/695c051455b82.webp",
+            "tags": [
+                {
+                    "id": 1,
+                    "owner_id": 1,
+                    "name": "Spicy",
+                    "icon_type": "heart",
+                    "color_type": "primary",
+                    "created_at": "2026-01-10T13:00:01.000000Z",
+                    "updated_at": "2026-01-10T13:14:55.000000Z",
+                    "pivot": {
+                        "product_id": 3,
+                        "tag_id": 1
+                    }
+                }
+            ],
+            "sizes": [
+                {
+                    "id": 3,
+                    "name": "Large",
+                    "base_price": 5.5,
+                    "final_price": 5.5,
+                    "discount_percentage": 0,
+                    "has_active_discount": false,
+                    "is_available": true,
+                    "price_source": "branch_size",
+                    "discount_source": "branch_size",
+                    "has_branch_product_size_record": true,
+                    "branch_product_id": 6,
+                    "branch_product_size_id": 1
+                }
+            ],
+            "has_sizes": true,
+            "modifier_groups": [
+                {
+                    "id": 1,
+                    "name": "Extra Topping",
+                    "selection_type": "multiple",
+                    "min_selection": 1,
+                    "max_selection": 2,
+                    "modifiers": [
+                        {
+                            "id": 1,
+                            "name": "Egg",
+                            "price": 0.25
+                        },
+                        {
+                            "id": 3,
+                            "name": "Egg + Vige",
+                            "price": 1
+                        }
+                    ]
+                }
+            ],
+            "pricing": {
+                "product_base_price": 1.1,
+                "branch_product_price": 1.1,
+                "is_available": true,
+                "discount_percentage": 5,
+                "has_active_discount": true,
+                "effective_price": 1.0450000000000002,
+                "is_popular": true,
+                "is_signature": true,
+                "is_chef_recommendation": false
+            }
+        },
+        {
+            "id": 2,
+            "name": "\u1794\u17b6\u1799\u1786\u17b6",
+            "category_id": 1,
+            "short_description": null,
+            "image_path": "\/storage\/products\/695c04e2ceb16.webp",
+            "tags": [],
+            "sizes": [
+                {
+                    "id": 4,
+                    "name": "\u1785\u17b6\u1793\u178f\u17bc\u1785",
+                    "base_price": 5,
+                    "final_price": 5,
+                    "discount_percentage": 15,
+                    "has_active_discount": false,
+                    "is_available": true,
+                    "price_source": "branch_size",
+                    "discount_source": "branch_size",
+                    "has_branch_product_size_record": true,
+                    "branch_product_id": 2,
+                    "branch_product_size_id": 2
+                },
+                {
+                    "id": 5,
+                    "name": "\u1785\u17b6\u1793\u1792\u17c6",
+                    "base_price": 55,
+                    "final_price": 46.75,
+                    "discount_percentage": 15,
+                    "has_active_discount": true,
+                    "is_available": true,
+                    "price_source": "branch_product",
+                    "discount_source": "branch_size",
+                    "has_branch_product_size_record": true,
+                    "branch_product_id": 2,
+                    "branch_product_size_id": 3
+                }
+            ],
+            "has_sizes": true,
+            "modifier_groups": [
+                {
+                    "id": 1,
+                    "name": "Extra Topping",
+                    "selection_type": "multiple",
+                    "min_selection": 1,
+                    "max_selection": 2,
+                    "modifiers": [
+                        {
+                            "id": 1,
+                            "name": "Egg",
+                            "price": 0.25
+                        },
+                        {
+                            "id": 3,
+                            "name": "Egg + Vige",
+                            "price": 1
+                        }
+                    ]
+                }
+            ],
+            "pricing": {
+                "product_base_price": 2.5,
+                "branch_product_price": 55,
+                "is_available": true,
+                "discount_percentage": 15,
+                "has_active_discount": true,
+                "effective_price": 46.75,
+                "is_popular": false,
+                "is_signature": true,
+                "is_chef_recommendation": true
+            }
+        },
+        {
+            "id": 4,
+            "name": "Iced Latte",
+            "category_id": 3,
+            "short_description": null,
+            "image_path": "\/storage\/products\/695c05424f737.webp",
+            "tags": [
+                {
+                    "id": 2,
+                    "owner_id": 1,
+                    "name": "Healthy",
+                    "icon_type": "clock",
+                    "color_type": "danger",
+                    "created_at": "2026-01-10T13:02:51.000000Z",
+                    "updated_at": "2026-01-10T13:14:51.000000Z",
+                    "pivot": {
+                        "product_id": 4,
+                        "tag_id": 2
+                    }
+                }
+            ],
+            "sizes": [
+                {
+                    "id": 1,
+                    "name": "Regular",
+                    "base_price": 10,
+                    "final_price": 10,
+                    "discount_percentage": 0,
+                    "has_active_discount": true,
+                    "is_available": true,
+                    "price_source": "branch_size",
+                    "discount_source": "branch_size",
+                    "has_branch_product_size_record": true,
+                    "branch_product_id": 7,
+                    "branch_product_size_id": 6
+                },
+                {
+                    "id": 2,
+                    "name": "Medium",
+                    "base_price": 15,
+                    "final_price": 15,
+                    "discount_percentage": 0,
+                    "has_active_discount": true,
+                    "is_available": true,
+                    "price_source": "branch_size",
+                    "discount_source": "branch_size",
+                    "has_branch_product_size_record": true,
+                    "branch_product_id": 7,
+                    "branch_product_size_id": 5
+                }
+            ],
+            "has_sizes": true,
+            "modifier_groups": [
+                {
+                    "id": 2,
+                    "name": "Spicy Level",
+                    "selection_type": "single",
+                    "min_selection": 0,
+                    "max_selection": 1,
+                    "modifiers": [
+                        {
+                            "id": 4,
+                            "name": "1",
+                            "price": 0
+                        },
+                        {
+                            "id": 5,
+                            "name": "2",
+                            "price": 0
+                        },
+                        {
+                            "id": 6,
+                            "name": "3",
+                            "price": 0
+                        },
+                        {
+                            "id": 7,
+                            "name": "4",
+                            "price": 0
+                        },
+                        {
+                            "id": 8,
+                            "name": "5",
+                            "price": 0
+                        },
+                        {
+                            "id": 9,
+                            "name": "6",
+                            "price": 0
+                        },
+                        {
+                            "id": 10,
+                            "name": "7",
+                            "price": 0
+                        }
+                    ]
+                }
+            ],
+            "pricing": {
+                "product_base_price": 1.5,
+                "branch_product_price": 5.5,
+                "is_available": true,
+                "discount_percentage": 0,
+                "has_active_discount": true,
+                "effective_price": 5.5,
+                "is_popular": true,
+                "is_signature": false,
+                "is_chef_recommendation": false
+            }
+        }
+    ]
+}

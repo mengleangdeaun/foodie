@@ -541,7 +541,7 @@ const handleOpenAppearance = (branch: any) => {
               onValueChange={setActiveTab}
               className="w-full"
             >
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="general" className="gap-1">
                 <Settings className="h-3 w-3 mr-2" />
                 General
@@ -553,10 +553,6 @@ const handleOpenAppearance = (branch: any) => {
             <TabsTrigger value="notifications" className="gap-1">
                 <Bell className="h-3 w-3 mr-2" />
                 Notifications
-            </TabsTrigger>
-            <TabsTrigger value="payment" className="gap-1">
-                <QrCode className="h-3 w-3 mr-2" />
-                Payment
             </TabsTrigger>
             {/* Remove the Appearance tab from here */}
             </TabsList>
@@ -772,30 +768,6 @@ const handleOpenAppearance = (branch: any) => {
                 </div>
               </TabsContent>
 
-<TabsContent value="payment" className="space-y-6 pt-4">
-  <div className="space-y-4 items-center">
-    <Label className="text-base font-medium flex items-center gap-2">
-      <QrCode className="h-4 w-4" />
-      Payment QR Code
-    </Label>
-    <p className="text-sm text-muted-foreground">
-      Upload KHQR/ABA QR code for easy payment scanning
-    </p>
-  </div>
-
-  <div className="space-y-4 flex justify-center">
-    <ImagePicker 
-      onImageSelect={f => setFormData({...formData, qr_payment_file: f})}
-      currentImage={formData.qr_payment_path ? 
-        `${import.meta.env.VITE_API_URL}/storage/${formData.qr_payment_path}` : 
-        undefined
-      }
-      label="QR Code Image"
-      description="Recommended size: 500x500px, PNG or JPG format"
-      boxClassName="max-h-25 max-w-25"
-    />
-  </div>
-</TabsContent>
 
 <TabsContent value="business-hour" className="space-y-6 pt-4"  >
 

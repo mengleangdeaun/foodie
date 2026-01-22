@@ -2,7 +2,8 @@ import { PropsWithChildren, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { IRootState } from './store';
 import { toggleRTL, toggleTheme, toggleLocale, toggleMenu, toggleLayout, toggleAnimation, toggleNavbar, toggleSemidark } from './store/themeConfigSlice';
-import { Toaster } from "@/components/ui/toaster"
+// import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "@/components/ui/sonner"
 import { useAuth } from './context/AuthContext';
 import DefaultLayout from './components/Layouts/DefaultLayout'; //
 import BlankLayout from './components/Layouts/BlankLayout'; //
@@ -32,7 +33,7 @@ function App({ children }: PropsWithChildren) {
             } main-section antialiased relative font-nunito text-sm font-normal`}
         >
             {children}
-            <Toaster />
+            <Toaster position='top-center' closeButton richColors />
         </div>
     );
 }

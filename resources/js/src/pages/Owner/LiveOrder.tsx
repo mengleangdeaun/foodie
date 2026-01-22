@@ -5,6 +5,7 @@ import api from '@/util/api';
 import { parseItemRemark } from '@/util/remark-util';
 import { getOrderDisplayLabel } from '@/util/order-format';
 import { useAuth } from '@/context/AuthContext';
+import  OrderTypeBadge from "./components/OrderTypeBadge"; 
 import { 
     Search, Loader2, Timer, ArrowUpRight, AlertCircle, 
     Printer, XCircle, CheckCircle, ChefHat, Calendar as CalendarIcon,
@@ -216,32 +217,7 @@ const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, trend, classN
     </Card>
 );
 
-const OrderTypeBadge: React.FC<{ order: Order }> = ({ order }) => {
-    if (order.restaurant_table) {
-        return (
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                <Utensils className="h-3 w-3 mr-1" />
-                Table {order.restaurant_table.table_number}
-            </Badge>
-        );
-    }
-    
-    if (order.delivery_partner) {
-        return (
-            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                <Truck className="h-3 w-3 mr-1" />
-                {order.delivery_partner.name}
-            </Badge>
-        );
-    }
-    
-    return (
-        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-            <Package className="h-3 w-3 mr-1" />
-            Takeaway
-        </Badge>
-    );
-};
+
 
 // MultiSelect Status Filter Component
 const StatusMultiSelect: React.FC<{
@@ -536,7 +512,7 @@ const AdminLiveDashboard = () => {
             
             toast({
                 title: "Status Updated",
-                description: `Order #${id} is now ${STATUS_CONFIG[newStatus].label}`,
+                description: `Order is now ${STATUS_CONFIG[newStatus].label}`,
             });
             
             if (newStatus === ORDER_STATUS.CANCELLED) {

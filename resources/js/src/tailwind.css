@@ -2,6 +2,37 @@
 @import './assets/css/animate.css';
 /* @import url('https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,300..700;1,300..700&display=swap'); */
 
+
+/* global.css or print.css */
+@media print {
+  body {
+    margin: 0;
+    padding: 0;
+    background: white !important;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+  
+  .thermal-receipt {
+    font-family: 'Courier New', Courier, monospace !important;
+    color: black !important;
+    background: white !important;
+  }
+  
+  .thermal-receipt img {
+    max-width: 100% !important;
+    filter: grayscale(100%) !important;
+  }
+  
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+}
+
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -154,12 +154,13 @@ public function syncAllProducts($id)
     $syncData = [];
     foreach ($masterProducts as $product) {
         // We use syncWithoutDetaching to avoid overwriting existing custom branch prices
-        $syncData[$product->id] = [
-            'branch_price' => $product->base_price,
-            'is_available' => true,
-            'discount_percentage' => $product->discount_percentage,
-            'has_active_discount' => $product->has_active_discount,
-        ];
+    $syncData[$product->id] = [
+        'branch_price' => $product->base_price,
+        'is_available' => true,
+        'discount_percentage' => $product->discount_percentage ?? 0,
+        'has_active_discount' => (bool) ($product->has_active_discount ?? false),
+    ];
+
     }
 
     $branch->products()->syncWithoutDetaching($syncData);

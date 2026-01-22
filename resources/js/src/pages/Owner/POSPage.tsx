@@ -11,17 +11,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
     ShoppingCart, User, Bike, Trash2, Search, Loader2, 
     CreditCard, Filter, Star, Award, ChefHat, X, Plus,
-    Minus, MessageSquare
+    Minus, MessageSquare, ChevronLeft, ChevronRight, Hash
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner"
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 // Import components
 import { ProductCard } from './components/pos/ProductCard';
 import { CartItem } from './components/pos/CartItem';
 import { ProductConfigModal } from './components/pos/ProductConfigModal';
+import { motion } from "framer-motion";
 
 // Types
 interface Modifier {
@@ -131,7 +134,7 @@ interface CartItemType {
   selected_modifiers: {
     [groupId: number]: Modifier[];
   };
-  selected_presets: SelectedPreset[]; // Updated to use new interface
+  selected_presets: SelectedPreset[];
   modifier_groups?: ModifierGroup[];
   sizes?: Size[];
   is_popular?: boolean;
@@ -143,13 +146,17 @@ const POSPage = () => {
     const { toast } = useToast();
     const { user } = useAuth();
     const lastLoadedBranchId = useRef<number | null>(null);
+    const tabsRef = useRef<HTMLDivElement>(null);
+    const [tabsScrollPosition, setTabsScrollPosition] = useState(0);
     
     // Data States
     const [categories, setCategories] = useState<Category[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [partners, setPartners] = useState<any[]>([]);
+    const [branchInfo, setBranchInfo] = useState<any>(null);
     const [tables, setTables] = useState<any[]>([]); 
     const [cart, setCart] = useState<CartItemType[]>([]);
+
     const [manualDiscountAmount, setManualDiscountAmount] = useState('0');
     const [manualDiscountPercentage, setManualDiscountPercentage] = useState('0');
     
@@ -189,7 +196,6 @@ const POSPage = () => {
                 api.get('/admin/pos-products', { params: { branch_id: user?.branch_id } }),
                 api.get('/admin/pos_delivery-partners'),
                 api.get('/admin/tables', { params: { branch_id: user?.branch_id } }),
-                // api.get('/branch/tax')
             ]);
             
             const [posRes, partnerRes, tableRes] = results;
@@ -198,6 +204,7 @@ const POSPage = () => {
                 const data = posRes.value.data.data || posRes.value.data;
                 setCategories(data.categories || []);
                 setProducts(data.products || []);
+                setBranchInfo(data.branch || null);
             }
             if (partnerRes.status === 'fulfilled') {
                 setPartners(partnerRes.value.data.data || partnerRes.value.data);
@@ -216,13 +223,35 @@ const POSPage = () => {
         }
     };
 
+    useEffect(() => {
+    if (tabsRef.current && activeCategory) {
+        // Small delay to ensure DOM is updated
+        setTimeout(() => {
+            const activeElement = document.querySelector(`[data-value="${activeCategory}"]`);
+            if (activeElement && tabsRef.current) {
+                const container = tabsRef.current;
+                const element = activeElement as HTMLElement;
+                const containerRect = container.getBoundingClientRect();
+                const elementRect = element.getBoundingClientRect();
+                
+                if (elementRect.left < containerRect.left || elementRect.right > containerRect.right) {
+                    element.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest',
+                        inline: 'center'
+                    });
+                }
+            }
+        }, 50);
+    }
+}, [activeCategory]);
+
     const filteredProducts = useMemo(() => {
         return products.filter(product => {
             const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                                  product.short_description?.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesCategory = activeCategory === 'all' || product.category_id?.toString() === activeCategory;
             
-            // Apply flag filters
             let matchesFlags = true;
             if (showPopular && !product.is_popular) matchesFlags = false;
             if (showSignature && !product.is_signature) matchesFlags = false;
@@ -240,146 +269,141 @@ const POSPage = () => {
         setRemark('');
     };
 
-const handlePresetChange = (
-  presetId: number, 
-  selectedOptions?: string[], 
-  selectedOption?: string, 
-  customText?: string,
-  name?: string // <--- Add this parameter
-) => {
-  setSelectedPresets(prev => {
-    const existingIndex = prev.findIndex(p => p.presetId === presetId);
-    
-    if (existingIndex !== -1) {
-      const updated = [...prev];
-      if ((!selectedOptions || selectedOptions.length === 0) && !selectedOption && !customText) {
-        updated.splice(existingIndex, 1);
-      } else {
-        updated[existingIndex] = { 
-          presetId, 
-          name: name || updated[existingIndex].name, // Keep existing name if not provided
-          selectedOptions, 
-          selectedOption, 
-          customText 
+    const handlePresetChange = (
+        presetId: number, 
+        selectedOptions?: string[], 
+        selectedOption?: string, 
+        customText?: string,
+        name?: string
+    ) => {
+        setSelectedPresets(prev => {
+            const existingIndex = prev.findIndex(p => p.presetId === presetId);
+            
+            if (existingIndex !== -1) {
+                const updated = [...prev];
+                if ((!selectedOptions || selectedOptions.length === 0) && !selectedOption && !customText) {
+                    updated.splice(existingIndex, 1);
+                } else {
+                    updated[existingIndex] = { 
+                        presetId, 
+                        name: name || updated[existingIndex].name,
+                        selectedOptions, 
+                        selectedOption, 
+                        customText 
+                    };
+                }
+                return updated;
+            } else {
+                if ((selectedOptions && selectedOptions.length > 0) || selectedOption || (customText && customText.trim() !== '')) {
+                    return [...prev, { 
+                        presetId, 
+                        name: name || `Option ${presetId}`,
+                        selectedOptions, 
+                        selectedOption, 
+                        customText 
+                    }];
+                }
+                return prev;
+            }
+        });
+    };
+
+    const addToCart = () => {
+        if (!configuringProduct) return;
+
+        let basePrice = configuringProduct.final_price;
+        let originalPrice = configuringProduct.original_price;
+        let modifiersTotal = 0;
+
+        if (selectedSize) {
+            basePrice = selectedSize.final_price;
+            originalPrice = selectedSize.base_price;
+        }
+
+        Object.values(selectedModifiers).forEach(modifierList => {
+            modifierList.forEach(modifier => {
+                modifiersTotal += modifier.price;
+            });
+        });
+
+        const finalItemPrice = basePrice + modifiersTotal;
+
+        const cartItem: CartItemType = {
+            id: configuringProduct.id,
+            name: configuringProduct.name,
+            quantity: 1,
+            price: finalItemPrice,
+            original_price: originalPrice,
+            has_discount: selectedSize ? selectedSize.has_active_discount : configuringProduct.has_discount,
+            discount_percentage: selectedSize ? selectedSize.discount_percentage : configuringProduct.discount_percentage,
+            remark: remark,
+            image_path: configuringProduct.image_path,
+            selected_size: selectedSize,
+            selected_modifiers: selectedModifiers,
+            selected_presets: selectedPresets,
+            modifier_groups: configuringProduct.modifier_groups,
+            sizes: configuringProduct.sizes,
+            is_popular: configuringProduct.is_popular,
+            is_signature: configuringProduct.is_signature,
+            is_chef_recommendation: configuringProduct.is_chef_recommendation
         };
-      }
-      return updated;
-    } else {
-      if ((selectedOptions && selectedOptions.length > 0) || selectedOption || (customText && customText.trim() !== '')) {
-        return [...prev, { 
-          presetId, 
-          name: name || `Option ${presetId}`, // Store the readable name
-          selectedOptions, 
-          selectedOption, 
-          customText 
-        }];
-      }
-      return prev;
-    }
-  });
-};
 
-const addToCart = () => {
-  if (!configuringProduct) return;
+        setCart(prev => {
+            const existingIndex = prev.findIndex(item => 
+                item.id === cartItem.id &&
+                item.selected_size?.id === cartItem.selected_size?.id &&
+                JSON.stringify(item.selected_modifiers) === JSON.stringify(cartItem.selected_modifiers) &&
+                JSON.stringify(item.selected_presets) === JSON.stringify(cartItem.selected_presets)
+            );
 
-  // Calculate final price with modifiers
-  let basePrice = configuringProduct.final_price;
-  let originalPrice = configuringProduct.original_price;
-  let modifiersTotal = 0;
+            if (existingIndex !== -1) {
+                const updated = [...prev];
+                updated[existingIndex].quantity += 1;
+                updated[existingIndex].remark = cartItem.remark;
+                return updated;
+            }
 
-  // If size is selected, use size price
-  if (selectedSize) {
-    basePrice = selectedSize.final_price;
-    originalPrice = selectedSize.base_price;
-  }
+            return [...prev, cartItem];
+        });
 
-  // Add selected modifiers prices
-  Object.values(selectedModifiers).forEach(modifierList => {
-    modifierList.forEach(modifier => {
-      modifiersTotal += modifier.price;
-    });
-  });
+        setConfiguringProduct(null);
+        setSelectedSize(null);
+        setSelectedModifiers({});
+        setSelectedPresets([]);
+        setRemark('');
+        
+        toast({
+            title: "Added to Cart",
+            description: `${configuringProduct.name} has been added to your cart.`
+        });
+    };
 
-  const finalItemPrice = basePrice + modifiersTotal;
+    const updateQty = (productId: number, sizeId: number | null, modifiers: any, change: number) => {
+        setCart(prev => prev.map(item => {
+            if (item.id === productId && 
+                item.selected_size?.id === sizeId &&
+                JSON.stringify(item.selected_modifiers) === JSON.stringify(modifiers)) {
+                const newQty = item.quantity + change;
+                if (newQty < 1) return null;
+                return { ...item, quantity: newQty };
+            }
+            return item;
+        }).filter(Boolean) as CartItemType[]);
+    };
 
-  const cartItem: CartItemType = {
-    id: configuringProduct.id,
-    name: configuringProduct.name,
-    quantity: 1,
-    price: finalItemPrice,
-    original_price: originalPrice,
-    has_discount: selectedSize ? selectedSize.has_active_discount : configuringProduct.has_discount,
-    discount_percentage: selectedSize ? selectedSize.discount_percentage : configuringProduct.discount_percentage,
-    remark: remark,
-    image_path: configuringProduct.image_path,
-    selected_size: selectedSize,
-    selected_modifiers: selectedModifiers,
-    selected_presets: selectedPresets, // Now using the new structure
-    modifier_groups: configuringProduct.modifier_groups,
-    sizes: configuringProduct.sizes,
-    is_popular: configuringProduct.is_popular,
-    is_signature: configuringProduct.is_signature,
-    is_chef_recommendation: configuringProduct.is_chef_recommendation
-  };
+    const removeFromCart = (productId: number, sizeId: number | null, modifiers: any) => {
+        setCart(prev => prev.filter(item => 
+            !(item.id === productId && 
+            item.selected_size?.id === sizeId &&
+            JSON.stringify(item.selected_modifiers) === JSON.stringify(modifiers))
+        ));
+    };
 
-  setCart(prev => {
-    // Check if same item with same configuration exists
-    const existingIndex = prev.findIndex(item => 
-      item.id === cartItem.id &&
-      item.selected_size?.id === cartItem.selected_size?.id &&
-      JSON.stringify(item.selected_modifiers) === JSON.stringify(cartItem.selected_modifiers) &&
-      JSON.stringify(item.selected_presets) === JSON.stringify(cartItem.selected_presets)
-    );
-
-    if (existingIndex !== -1) {
-      const updated = [...prev];
-      updated[existingIndex].quantity += 1;
-      updated[existingIndex].remark = cartItem.remark;
-      return updated;
-    }
-
-    return [...prev, cartItem];
-  });
-
-  // Reset configuration modal
-  setConfiguringProduct(null);
-  setSelectedSize(null);
-  setSelectedModifiers({});
-  setSelectedPresets([]);
-  setRemark('');
-  
-  toast({
-    title: "Added to Cart",
-    description: `${configuringProduct.name} has been added to your cart.`
-  });
-};
-
-const updateQty = (productId: number, sizeId: number | null, modifiers: any, change: number) => {
-  setCart(prev => prev.map(item => {
-    if (item.id === productId && 
-        item.selected_size?.id === sizeId &&
-        JSON.stringify(item.selected_modifiers) === JSON.stringify(modifiers)) {
-      const newQty = item.quantity + change;
-      if (newQty < 1) return null;
-      return { ...item, quantity: newQty };
-    }
-    return item;
-  }).filter(Boolean) as CartItemType[]);
-};
-
-const removeFromCart = (productId: number, sizeId: number | null, modifiers: any) => {
-  setCart(prev => prev.filter(item => 
-    !(item.id === productId && 
-      item.selected_size?.id === sizeId &&
-      JSON.stringify(item.selected_modifiers) === JSON.stringify(modifiers))
-  ));
-};
-
-const updateCartItemRemark = (index: number, newRemark: string) => {
-  setCart(prev => prev.map((item, idx) => 
-    idx === index ? { ...item, remark: newRemark } : item
-  ));
-};
+    const updateCartItemRemark = (index: number, newRemark: string) => {
+        setCart(prev => prev.map((item, idx) => 
+            idx === index ? { ...item, remark: newRemark } : item
+        ));
+    };
 
     const toggleModifier = (groupId: number, modifier: Modifier) => {
         const group = configuringProduct?.modifier_groups?.find(g => g.id === groupId);
@@ -393,13 +417,11 @@ const updateCartItemRemark = (index: number, newRemark: string) => {
                 return { ...prev, [groupId]: isSelected ? [] : [modifier] };
             } else {
                 if (isSelected) {
-                    // Remove modifier
                     return { 
                         ...prev, 
                         [groupId]: current.filter(m => m.id !== modifier.id) 
                     };
                 } else {
-                    // Check max selection
                     if (group.max_selection && current.length >= group.max_selection) {
                         toast({
                             variant: "destructive",
@@ -417,297 +439,534 @@ const updateCartItemRemark = (index: number, newRemark: string) => {
         });
     };
 
-    const subtotal = useMemo(() => 
-        cart.reduce((acc, item) => acc + (item.price * item.quantity), 0), 
-        [cart]
-    );
+    const round2 = (value: number) =>
+        Math.round((value + Number.EPSILON) * 100) / 100;
 
-    // Calculate delivery partner discount
+    const subtotal = useMemo(() => {
+        const value = cart.reduce(
+            (acc, item) => acc + item.original_price * item.quantity,
+            0
+        );
+        return round2(value);
+    }, [cart]);
+
+    const modifiersTotal = useMemo(() => {
+        const value = cart.reduce((total, item) => {
+            const itemModifiers = Object.values(item.selected_modifiers || {})
+                .flat()
+                .reduce((sum, mod) => sum + mod.price, 0);
+
+            return total + itemModifiers * item.quantity;
+        }, 0);
+
+        return round2(value);
+    }, [cart]);
+
     const deliveryPartnerDiscount = useMemo(() => {
-        if (orderType === 'delivery' && selectedPartner && Number(selectedPartner.is_discount_active) === 1) {
-            const discountPercentage = parseFloat(selectedPartner.discount_percentage) || 0;
-            if (discountPercentage > 0) {
-                return subtotal * (discountPercentage / 100);
-            }
+        if (
+            orderType === 'delivery' &&
+            selectedPartner &&
+            Number(selectedPartner.is_discount_active) === 1
+        ) {
+            const percent = parseFloat(selectedPartner.discount_percentage) || 0;
+            return percent > 0
+                ? round2(subtotal * (percent / 100))
+                : 0;
         }
+
         return 0;
     }, [orderType, selectedPartner, subtotal]);
 
-    // Calculate order level discount
     const orderLevelDiscount = useMemo(() => {
         if (manualDiscountAmount && parseFloat(manualDiscountAmount) > 0) {
-            return parseFloat(manualDiscountAmount);
-        } else if (manualDiscountPercentage && parseFloat(manualDiscountPercentage) > 0) {
-            return subtotal * (parseFloat(manualDiscountPercentage) / 100);
+            return round2(parseFloat(manualDiscountAmount));
         }
+
+        if (manualDiscountPercentage && parseFloat(manualDiscountPercentage) > 0) {
+            return round2(
+                subtotal * (parseFloat(manualDiscountPercentage) / 100)
+            );
+        }
+
         return 0;
     }, [manualDiscountAmount, manualDiscountPercentage, subtotal]);
 
-    // Calculate item discount total
     const itemDiscountTotal = useMemo(() => {
-        return cart.reduce((total, item) => {
-            if (item.has_discount && item.discount_percentage > 0) {
-                const originalPrice = item.selected_size?.base_price || item.original_price;
-                return total + (originalPrice * (item.discount_percentage / 100) * item.quantity);
-            }
-            return total;
+        const value = cart.reduce((total, item) => {
+            if (!item.has_discount || item.discount_percentage <= 0) return total;
+
+            const price = item.selected_size?.base_price ?? item.original_price;
+
+            return (
+                total +
+                price * (item.discount_percentage / 100) * item.quantity
+            );
         }, 0);
+
+        return round2(value);
     }, [cart]);
 
-    const totalDiscount = useMemo(() => 
-        itemDiscountTotal + orderLevelDiscount + deliveryPartnerDiscount, 
-        [itemDiscountTotal, orderLevelDiscount, deliveryPartnerDiscount]
-    );
+    const totalDiscount = useMemo(() => {
+        return round2(
+            itemDiscountTotal + orderLevelDiscount + deliveryPartnerDiscount
+        );
+    }, [itemDiscountTotal, orderLevelDiscount, deliveryPartnerDiscount]);
 
-    const taxableAmount = useMemo(() => 
-        Math.max(0, subtotal - totalDiscount), 
-        [subtotal, totalDiscount]
-    );
+    const taxableAmount = useMemo(() => {
+        return round2(
+            Math.max(0, subtotal + modifiersTotal - totalDiscount)
+        );
+    }, [subtotal, modifiersTotal, totalDiscount]);
 
-const handleCheckout = async () => {
-  if (cart.length === 0 || checkoutLoading) return;
-  setCheckoutLoading(true);
-  
-  try {
-    // Prepare items with correct data structure for backend
-    const items = cart.map(item => {
-      const modifiersArray: number[] = [];
-      Object.values(item.selected_modifiers).forEach(modifierList => {
-        modifierList.forEach(modifier => {
-          modifiersArray.push(modifier.id);
-        });
-      });
+    const taxName = useMemo(() => branchInfo?.tax_name || 'Tax', [branchInfo]);
+    const taxRate = useMemo(() => parseFloat(branchInfo?.tax_rate || 0), [branchInfo]);
+    const taxIsActive = useMemo(() => !!branchInfo?.tax_is_active, [branchInfo]);
 
-      // Format presets for backend (as simple remark string)
-// Build professional remarks [Label: Value]
-const presetRemark = item.selected_presets.map(preset => {
-    // If 'name' is missing, it will show "Option ID", but now it prioritizes the Name
-    const label = (preset as any).name || (preset as any).label || `Option ${preset.presetId}`;
+    const taxAmount = useMemo(() => {
+        if (!taxIsActive || taxRate <= 0) return 0;
+        return round2(taxableAmount * (taxRate / 100));
+    }, [taxableAmount, taxRate, taxIsActive]);
+
+    const finalTotal = useMemo(() => {
+        return round2(taxableAmount + taxAmount);
+    }, [taxableAmount, taxAmount]);
+
+const scrollTabs = (direction: 'left' | 'right') => {
+    if (!tabsRef.current) return;
     
-    let value = '';
-    if (preset.selectedOptions && preset.selectedOptions.length > 0) {
-      value = preset.selectedOptions.join(', ');
-    } else if (preset.selectedOption) {
-      value = preset.selectedOption;
-    } else if (preset.customText) {
-      value = preset.customText;
-    }
-
-    // Wrap in brackets [Name: Value]
-    return value ? `[${label}: ${value}]` : '';
-  }).filter(Boolean).join(' ');
-
-  // 2. Combine with user's manual remark
-  const finalRemark = `${presetRemark} ${item.remark || ''}`.trim();
-
-
-      return {
-        product_id: item.id,
-        quantity: item.quantity,
-        remark: finalRemark, // Send the clean string to DB
-        selected_size: item.selected_size ? {
-          id: item.selected_size.id,
-          name: item.selected_size.name
-        } : null,
-        selected_modifiers: modifiersArray
-      };
-    });
-
-    // Prepare request data
-    const requestData: any = {
-      branch_id: user?.branch_id,
-      order_type: orderType,
-      delivery_partner_id: selectedPartner?.id || null,
-      table_id: selectedTable !== 'none' ? selectedTable : null,
-      items,
-      order_discount_amount: orderLevelDiscount > 0 ? orderLevelDiscount : null,
-      order_discount_percentage: manualDiscountPercentage && parseFloat(manualDiscountPercentage) > 0 ? 
-        parseFloat(manualDiscountPercentage) : null,
-      delivery_partner_discount: deliveryPartnerDiscount
-    };
-
-    const response = await api.post('/admin/pos/order', requestData);
-
-    // Reset everything
-    setManualDiscountAmount('0');
-    setManualDiscountPercentage('0');
-    setCart([]);
-    setSelectedTable('none');
-    setSelectedPartner(null);
+    const scrollAmount = 150; // Reduced for smoother scrolling
+    const container = tabsRef.current;
+    const newPosition = direction === 'left' 
+        ? Math.max(0, container.scrollLeft - scrollAmount)
+        : container.scrollLeft + scrollAmount;
     
-    toast({ 
-      title: "Order Successful!", 
-      description: `Order #${response.data.order_number} has been placed. Total: $${response.data.total}`,
-      duration: 5000
+    container.scrollTo({ 
+        left: newPosition, 
+        behavior: 'smooth' 
     });
-  } catch (error: any) {
-    console.error('Order submission error:', error);
-    toast({ 
-      variant: "destructive", 
-      title: "Order Failed", 
-      description: error.response?.data?.message || "Please try again" 
-    });
-  } finally { 
-    setCheckoutLoading(false); 
-  }
 };
 
+    const handleCheckout = async () => {
+        if (cart.length === 0 || checkoutLoading) return;
+        setCheckoutLoading(true);
+        
+        try {
+            const items = cart.map(item => {
+                const modifiersArray: number[] = [];
+                Object.values(item.selected_modifiers).forEach(modifierList => {
+                    modifierList.forEach(modifier => {
+                        modifiersArray.push(modifier.id);
+                    });
+                });
+
+                const presetRemark = item.selected_presets.map(preset => {
+                    const label = (preset as any).name || (preset as any).label || `Option ${preset.presetId}`;
+                    
+                    let value = '';
+                    if (preset.selectedOptions && preset.selectedOptions.length > 0) {
+                        value = preset.selectedOptions.join(', ');
+                    } else if (preset.selectedOption) {
+                        value = preset.selectedOption;
+                    } else if (preset.customText) {
+                        value = preset.customText;
+                    }
+
+                    return value ? `[${label}: ${value}]` : '';
+                }).filter(Boolean).join(' ');
+
+                const finalRemark = `${presetRemark} ${item.remark || ''}`.trim();
+
+                return {
+                    product_id: item.id,
+                    quantity: item.quantity,
+                    remark: finalRemark,
+                    selected_size: item.selected_size ? {
+                        id: item.selected_size.id,
+                        name: item.selected_size.name
+                    } : null,
+                    selected_modifiers: modifiersArray
+                };
+            });
+
+            const orderTypeForBackend = orderType === 'walk_in' && (!selectedTable || selectedTable === 'none')
+                ? 'takeaway'
+                : orderType;
+
+            const requestData: any = {
+                branch_id: user?.branch_id,
+                order_type: orderTypeForBackend,
+                delivery_partner_id: selectedPartner?.id || null,
+                table_id: selectedTable !== 'none' ? selectedTable : null,
+                items,
+                order_discount_amount: orderLevelDiscount > 0 ? orderLevelDiscount : null,
+                order_discount_percentage: manualDiscountPercentage && parseFloat(manualDiscountPercentage) > 0 ? 
+                    parseFloat(manualDiscountPercentage) : null,
+                delivery_partner_discount: deliveryPartnerDiscount
+            };
+
+            const response = await api.post('/admin/pos/order', requestData);
+
+            setManualDiscountAmount('0');
+            setManualDiscountPercentage('0');
+            setCart([]);
+            setSelectedTable('none');
+            setSelectedPartner(null);
+            
+            toast({ 
+                title: "Order Successful!", 
+                description: `Order #${response.data.order_code} has been placed. Total: $${response.data.total}`,
+                duration: 5000
+            });
+        } catch (error: any) {
+            console.error('Order submission error:', error);
+            toast({ 
+                variant: "destructive", 
+                title: "Order Failed", 
+                description: error.response?.data?.message || "Please try again" 
+            });
+        } finally { 
+            setCheckoutLoading(false); 
+        }
+    };
+
     return (
-        <div className="flex h-[calc(100vh-80px)] overflow-hidden gap-4 ">
+        <div className="flex h-[calc(100vh-80px)] overflow-hidden bg-background/50">
             {/* LEFT: Menu Selection */}
-            <div className="flex-1 flex flex-col gap-4">
-                <Card className="p-4 border-none shadow-sm flex flex-col gap-4">
-                    <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 flex-1">
-                            <div className="relative flex-1 max-w-sm">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                                <Input 
-                                    placeholder="Search Menu..." 
-                                    className="pl-10 h-11 bg-slate-100 border-none" 
-                                    value={searchQuery} 
-                                    onChange={(e) => setSearchQuery(e.target.value)} 
-                                />
-                            </div>
-                            <Button 
-                                variant={showFilters ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => setShowFilters(!showFilters)}
-                                className="gap-2"
-                            >
-                                <Filter size={16} />
-                                Filters
-                                {(showPopular || showSignature || showChefPick) && (
-                                    <Badge className="ml-1 h-5 w-5 p-0 bg-primary">
-                                        {(showPopular ? 1 : 0) + (showSignature ? 1 : 0) + (showChefPick ? 1 : 0)}
-                                    </Badge>
-                                )}
-                            </Button>
-                        </div>
-                        {orderType === 'walk_in' && tables.length > 0 && (
-                            <Select onValueChange={setSelectedTable} value={selectedTable}>
-                                <SelectTrigger className="w-[160px] h-11 font-bold tracking-tighter uppercase">
-                                    <SelectValue placeholder="Select Table" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {/* <SelectItem value="">No Table</SelectItem> */}
-                                    {tables.map(t => (
-                                        <SelectItem key={t.id} value={t.id.toString()}>
-                                            Table {t.table_number}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        )}
-                    </div>
+            <div className="flex-1 flex flex-col gap-4 p-4 overflow-hidden">
+                {/* Header Card */}
+<Card className="p-4 border-border/50 shadow-sm dark:shadow-md dark:bg-card/95">
+    {/* Header Section */}
+    <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+        {/* Left Section: Search and Filters */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-1 w-full">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md w-full">
+                <Search 
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" 
+                    size={18} 
+                    strokeWidth={1.5}
+                />
+                <Input 
+                    placeholder="Search menu items..." 
+                    className="pl-10 h-11 border-border/60 dark:border-border/80 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
+                    value={searchQuery} 
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+            </div>
 
-                    {/* Flag Filters */}
-                    {showFilters && (
-                        <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg border">
-                            <div className="flex items-center gap-2">
-                                <Checkbox 
-                                    checked={showPopular} 
-                                    onCheckedChange={(checked) => setShowPopular(checked as boolean)}
-                                    id="popular-filter"
-                                    className="data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
-                                />
-                                <Label htmlFor="popular-filter" className="flex items-center gap-1 cursor-pointer">
-                                    <Star size={14} className="text-yellow-500" />
-                                    <span className="text-sm font-medium">Popular</span>
-                                </Label>
+            {/* Filters Button */}
+            <Button 
+                variant={showFilters ? "default" : "outline"}
+                size="lg"
+                onClick={() => setShowFilters(!showFilters)}
+                className="gap-2 border-border/60 dark:border-border/80 hover:border-primary/50 transition-colors"
+            >
+                <Filter size={16} />
+                Filters
+                {(showPopular || showSignature || showChefPick) && (
+                    <Badge 
+                        variant="secondary" 
+                        className="ml-1 h-5 w-5 p-0 bg-primary text-primary-foreground flex items-center justify-center"
+                    >
+                        {(showPopular ? 1 : 0) + (showSignature ? 1 : 0) + (showChefPick ? 1 : 0)}
+                    </Badge>
+                )}
+            </Button>
+        </div>
+
+        {/* Table Selector - FIXED: Removed empty string value */}
+        {orderType === 'walk_in' && tables.length > 0 && (
+            <div className="w-full md:w-auto">
+                <Select onValueChange={setSelectedTable} value={selectedTable || "none"}>
+                    <SelectTrigger className="w-full md:w-[180px] h-11 border-border/60 dark:border-border/80 font-semibold bg-background">
+                        <SelectValue placeholder="Select Table" />
+                    </SelectTrigger>
+                    <SelectContent className="border-border/60 dark:border-border/80">
+                        <SelectItem value="none">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <div className="w-2 h-2 rounded-full bg-muted" />
+                                <span>No Table</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Checkbox 
-                                    checked={showSignature} 
-                                    onCheckedChange={(checked) => setShowSignature(checked as boolean)}
-                                    id="signature-filter"
-                                    className="data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
-                                />
-                                <Label htmlFor="signature-filter" className="flex items-center gap-1 cursor-pointer">
-                                    <Award size={14} className="text-red-500" />
-                                    <span className="text-sm font-medium">Signature</span>
-                                </Label>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Checkbox 
-                                    checked={showChefPick} 
-                                    onCheckedChange={(checked) => setShowChefPick(checked as boolean)}
-                                    id="chef-filter"
-                                    className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                                />
-                                <Label htmlFor="chef-filter" className="flex items-center gap-1 cursor-pointer">
-                                    <ChefHat size={14} className="text-green-500" />
-                                    <span className="text-sm font-medium">Chef's Pick</span>
-                                </Label>
-                            </div>
-                            {(showPopular || showSignature || showChefPick) && (
-                                <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    onClick={() => {
-                                        setShowPopular(false);
-                                        setShowSignature(false);
-                                        setShowChefPick(false);
-                                    }}
-                                    className="ml-auto"
-                                >
-                                    <X size={14} className="mr-1" />
-                                    Clear
-                                </Button>
+                        </SelectItem>
+                        {tables.map(t => (
+                            <SelectItem 
+                                key={t.id} 
+                                value={t.id.toString()}
+                                className="focus:bg-accent focus:text-accent-foreground"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-primary" />
+                                    <span>Table {t.table_number}</span>
+                                </div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+        )}
+    </div>
+
+    {/* Filters Panel */}
+    {showFilters && (
+        <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+        >
+            <div className="mt-4 p-3 bg-accent/50 dark:bg-accent/30 rounded-lg border border-border/40 flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                    <Checkbox 
+                        checked={showPopular} 
+                        onCheckedChange={(checked) => setShowPopular(checked as boolean)}
+                        id="popular-filter"
+                        className="data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500 dark:data-[state=checked]:bg-amber-600"
+                    />
+                    <Label htmlFor="popular-filter" className="flex items-center gap-2 cursor-pointer hover:text-foreground/80 transition-colors">
+                        <Star size={14} className="text-amber-500 dark:text-amber-400" fill="currentColor" />
+                        <span className="text-sm font-medium">Popular</span>
+                    </Label>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                    <Checkbox 
+                        checked={showSignature} 
+                        onCheckedChange={(checked) => setShowSignature(checked as boolean)}
+                        id="signature-filter"
+                        className="data-[state=checked]:bg-rose-600 data-[state=checked]:border-rose-600 dark:data-[state=checked]:bg-rose-700"
+                    />
+                    <Label htmlFor="signature-filter" className="flex items-center gap-2 cursor-pointer hover:text-foreground/80 transition-colors">
+                        <Award size={14} className="text-rose-600 dark:text-rose-400" />
+                        <span className="text-sm font-medium">Signature</span>
+                    </Label>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                    <Checkbox 
+                        checked={showChefPick} 
+                        onCheckedChange={(checked) => setShowChefPick(checked as boolean)}
+                        id="chef-filter"
+                        className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 dark:data-[state=checked]:bg-emerald-700"
+                    />
+                    <Label htmlFor="chef-filter" className="flex items-center gap-2 cursor-pointer hover:text-foreground/80 transition-colors">
+                        <ChefHat size={14} className="text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-sm font-medium">Chef's Pick</span>
+                    </Label>
+                </div>
+                
+                {(showPopular || showSignature || showChefPick) && (
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => {
+                            setShowPopular(false);
+                            setShowSignature(false);
+                            setShowChefPick(false);
+                        }}
+                        className="ml-auto text-muted-foreground hover:text-foreground hover:bg-transparent"
+                    >
+                        <X size={14} className="mr-1.5" />
+                        Clear filters
+                    </Button>
+                )}
+            </div>
+        </motion.div>
+    )}
+</Card>
+
+                
+{/* Category Tabs - Enhanced Scrollable Version */}
+<Card className="p-2 border-border/50 shadow-sm dark:shadow-md">
+    <div className="flex items-center gap-1">
+        {/* Left Scroll Button */}
+        <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => scrollTabs('left')}
+            className="h-8 w-8 shrink-0 hover:bg-accent/50"
+            disabled={tabsScrollPosition === 0}
+        >
+            <ChevronLeft size={16} />
+        </Button>
+        
+        {/* Scrollable Tabs Area */}
+        <div className="flex-1 overflow-hidden">
+            <Tabs 
+                value={activeCategory} 
+                onValueChange={setActiveCategory} 
+                className="w-full"
+            >
+                <ScrollArea 
+                    className="w-full whitespace-nowrap"
+                    viewportRef={tabsRef}
+                    onScroll={(e) => {
+                        const target = e.target as HTMLDivElement;
+                        setTabsScrollPosition(target.scrollLeft);
+                    }}
+                >
+                    <TabsList 
+                        className="bg-accent/30 dark:bg-accent/20 h-9 inline-flex p-1 gap-1"
+                    >
+                        <TabsTrigger 
+                            value="all" 
+                            className="h-7 px-3 data-[state=active]:bg-background data-[state=active]:shadow-sm dark:data-[state=active]:shadow data-[state=active]:text-foreground font-medium text-xs rounded-sm flex-shrink-0 transition-all hover:bg-accent/50"
+                        >
+                            All Items
+                            {activeCategory === 'all' && cart.length > 0 && (
+                                <Badge variant="secondary" className="ml-1 h-4 w-4 p-0 text-[10px]">
+                                    {filteredProducts.length}
+                                </Badge>
                             )}
-                        </div>
-                    )}
-
-                    <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-                        <TabsList className="bg-transparent h-10 justify-start overflow-x-auto no-scrollbar">
-                            <TabsTrigger 
-                                value="all" 
-                                className="font-bold uppercase tracking-tighter data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                            >
-                                ALL
-                            </TabsTrigger>
-                            {categories.map(cat => (
+                        </TabsTrigger>
+                        {categories.map(cat => {
+                            const categoryProductCount = filteredProducts.filter(p => 
+                                p.category_id === cat.id
+                            ).length;
+                            
+                            return (
                                 <TabsTrigger 
                                     key={cat.id} 
                                     value={cat.id.toString()} 
-                                    className="font-bold uppercase tracking-tighter data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                                    className=" px-3 data-[state=active]:bg-background data-[state=active]:shadow-sm dark:data-[state=active]:shadow data-[state=active]:text-foreground font-medium text-xs rounded-sm flex-shrink-0 transition-all hover:bg-accent/50"
                                 >
                                     {cat.name}
+                                    {activeCategory === cat.id.toString() && categoryProductCount > 0 && (
+                                        <Badge variant="secondary" className="ml-1 flex items-center justify-center h-4 w-4 p-0 text-[10px]">
+                                            {categoryProductCount}
+                                        </Badge>
+                                    )}
                                 </TabsTrigger>
-                            ))}
-                        </TabsList>
-                    </Tabs>
-                </Card>
+                            );
+                        })}
+                    </TabsList>
+                </ScrollArea>
+            </Tabs>
+        </div>
+        
+        {/* Right Scroll Button */}
+        <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => scrollTabs('right')}
+            className="h-8 w-8 shrink-0 hover:bg-accent/50"
+        >
+            <ChevronRight size={16} />
+        </Button>
+    </div>
+    
+    {/* Category Stats */}
+    <div className="flex items-center justify-between mt-2 px-1">
+        <div className="text-xs text-muted-foreground">
+            {activeCategory === 'all' ? (
+                <>
+                    <span className="font-medium">{filteredProducts.length}</span> of <span className="font-medium">{products.length}</span> items
+                </>
+            ) : (
+                <>
+                    <span className="font-medium">
+                        {filteredProducts.filter(p => p.category_id.toString() === activeCategory).length}
+                    </span> items in this category
+                </>
+            )}
+        </div>
+        <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+                const currentIndex = categories.findIndex(cat => cat.id.toString() === activeCategory);
+                if (currentIndex !== -1 && currentIndex < categories.length - 1) {
+                    const nextCategory = categories[currentIndex + 1].id.toString();
+                    setActiveCategory(nextCategory);
+                    
+                    // Scroll to show the active tab
+                    setTimeout(() => {
+                        const activeElement = document.querySelector(`[data-value="${nextCategory}"]`);
+                        if (activeElement && tabsRef.current) {
+                            activeElement.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'nearest',
+                                inline: 'center'
+                            });
+                        }
+                    }, 100);
+                } else if (activeCategory !== 'all') {
+                    setActiveCategory('all');
+                }
+            }}
+            className="text-xs h-6 text-muted-foreground hover:text-foreground"
+        >
+            Next Category
+            <ChevronRight size={12} className="ml-1" />
+        </Button>
+    </div>
+</Card>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pr-2 pb-10">
-                    {loading ? (
-                         Array(8).fill(0).map((_, i) => (
-                            <div key={i} className="h-48 bg-slate-200 animate-pulse rounded-xl" />
-                         ))
-                    ) : filteredProducts.length > 0 ? (
-                        filteredProducts.map(product => (
-                            <ProductCard
-                                key={product.id}
-                                product={product}
-                                onConfigure={openProductConfig}
-                            />
-                        ))
-                    ) : (
-                        <div className="col-span-full flex flex-col items-center justify-center py-20 text-slate-400">
-                            <Search size={48} />
-                            <p className="mt-4 font-bold">No products found</p>
-                            <p className="text-sm">Try changing your filters or search term</p>
+                {/* Product Grid */}
+                <div className="flex-1 overflow-hidden">
+                    <div className="h-full overflow-y-auto pr-2 pb-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3">
+                            {loading ? (
+                                Array.from({ length: 12 }).map((_, i) => (
+                                    <Card key={i} className="overflow-hidden border-border/40 animate-pulse">
+                                        <div className="aspect-square bg-muted dark:bg-muted/60" />
+                                        <div className="p-3 space-y-2">
+                                            <div className="h-4 bg-muted dark:bg-muted/60 rounded w-3/4" />
+                                            <div className="h-3 bg-muted dark:bg-muted/60 rounded w-1/2" />
+                                            <div className="h-6 bg-muted dark:bg-muted/60 rounded w-1/3" />
+                                        </div>
+                                    </Card>
+                                ))
+                            ) : filteredProducts.length > 0 ? (
+                                filteredProducts.map(product => (
+                                    <ProductCard
+                                        key={product.id}
+                                        product={product}
+                                        onConfigure={openProductConfig}
+                                    />
+                                ))
+                            ) : (
+                                <div className="col-span-full flex flex-col items-center justify-center py-12 text-center bg-background/50 dark:bg-background/30 rounded-xl border border-dashed border-border">
+                                    <div className="w-16 h-16 rounded-full bg-accent dark:bg-accent/40 flex items-center justify-center mb-4">
+                                        <Search size={32} className="text-muted-foreground" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold mb-2">No products found</h3>
+                                    <p className="text-muted-foreground max-w-md mb-4">
+                                        Try adjusting your search term or filters to find what you're looking for.
+                                    </p>
+                                    <Button 
+                                        variant="outline" 
+                                        className="border-border/60"
+                                        onClick={() => {
+                                            setSearchQuery('');
+                                            setShowPopular(false);
+                                            setShowSignature(false);
+                                            setShowChefPick(false);
+                                        }}
+                                    >
+                                        Clear all filters
+                                    </Button>
+                                </div>
+                            )}
                         </div>
-                    )}
+                    </div>
                 </div>
             </div>
 
             {/* RIGHT: Cart Sidebar */}
-            <div className="w-[450px] flex flex-col gap-4">
-                <Card className="flex-1 flex flex-col border-none shadow-xl overflow-hidden bg-white">
-                    <div className="p-4 border-b flex justify-between items-center bg-slate-50/50">
-                        <h3 className="font-black flex items-center gap-2 tracking-tighter uppercase">
-                            <ShoppingCart size={20}/> Cart ({cart.length})
-                        </h3>
+            <div className="w-[420px] xl:w-[480px] flex flex-col gap-4 p-4 border-l border-border/40 bg-background">
+                <Card className="flex-1 flex flex-col border-border/50 shadow-sm dark:shadow-md overflow-hidden">
+                    {/* Cart Header */}
+                    <div className="p-4 border-b border-border/40 flex justify-between items-center bg-card">
+                        <div className="flex items-center gap-2">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                                <ShoppingCart size={20} className="text-primary" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold">Order Cart</h3>
+                                <p className="text-sm text-muted-foreground">{cart.length} item{cart.length !== 1 ? 's' : ''}</p>
+                            </div>
+                        </div>
                         <Button 
                             variant="ghost" 
                             size="sm" 
@@ -720,17 +979,19 @@ const presetRemark = item.selected_presets.map(preset => {
                                     });
                                 }
                             }} 
-                            className="text-slate-400 hover:text-red-500"
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                             disabled={cart.length === 0}
                         >
-                            <Trash2 size={16}/>
+                            <Trash2 size={16} />
+                            <span className="ml-2 hidden sm:inline">Clear</span>
                         </Button>
                     </div>
                     
+                    {/* Order Type */}
                     <div className="p-3 grid grid-cols-2 gap-2">
                         <Button 
                             variant={orderType === 'walk_in' ? 'default' : 'outline'} 
-                            className="font-bold uppercase tracking-tighter h-11" 
+                            className="h-11 font-medium" 
                             onClick={() => {
                                 setOrderType('walk_in'); 
                                 setSelectedPartner(null);
@@ -740,39 +1001,48 @@ const presetRemark = item.selected_presets.map(preset => {
                         </Button>
                         <Button 
                             variant={orderType === 'delivery' ? 'default' : 'outline'} 
-                            className="font-bold uppercase tracking-tighter h-11" 
+                            className="h-11 font-medium" 
                             onClick={() => setOrderType('delivery')}
                         >
                             <Bike className="mr-2 h-4 w-4" /> Delivery
                         </Button>
                     </div>
 
+                    {/* Delivery Partners */}
                     {orderType === 'delivery' && (
-                        <div className="p-4 border-y bg-primary/5">
-                            <Label className="text-[10px] font-black uppercase text-primary mb-2 block">
-                                Delivery Partner
+                        <div className="px-4 pb-3">
+                            <Label className="text-sm font-medium mb-2 block">
+                               Select a Delivery
                             </Label>
                             <div className="flex flex-wrap gap-2">
                                 {partners.map(p => (
                                     <Badge 
                                         key={p.id} 
                                         variant={selectedPartner?.id === p.id ? "default" : "outline"}
-                                        className="cursor-pointer px-3 py-1 font-bold uppercase tracking-tighter"
+                                        className="cursor-pointer px-3 py-1.5 font-medium hover:bg-primary/10 transition-colors"
                                         onClick={() => setSelectedPartner(p)}
                                     >
-                                        {p.name} {Number(p.is_discount_active) === 1 ? ` (-${p.discount_percentage}%)` : ''}
+                                        {p.name}
+                                        {Number(p.is_discount_active) === 1 && (
+                                            <span className="ml-1 text-xs bg-primary/20 px-1.5 py-0.5 rounded">
+                                                -{p.discount_percentage}%
+                                            </span>
+                                        )}
                                     </Badge>
                                 ))}
                             </div>
                         </div>
                     )}
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                    {/* Cart Items */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
                         {cart.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center opacity-20 text-slate-400 py-20">
-                                <ShoppingCart size={48} />
-                                <p className="font-black uppercase text-xs mt-2">Empty Cart</p>
-                                <p className="text-xs mt-1 text-slate-300">Add items from the menu</p>
+                            <div className="h-full flex flex-col items-center justify-center text-muted-foreground py-12">
+                                <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mb-4">
+                                    <ShoppingCart size={32} className="opacity-40" />
+                                </div>
+                                <p className="font-medium mb-1">Your cart is empty</p>
+                                <p className="text-sm">Add items from the menu to get started</p>
                             </div>
                         ) : cart.map((item, index) => (
                             <CartItem
@@ -790,21 +1060,20 @@ const presetRemark = item.selected_presets.map(preset => {
                         ))}
                     </div>
 
-                    <div className="p-4 border-t bg-slate-50/50 space-y-4">
+                    {/* Discount Inputs */}
+                    <div className="p-4 border-t border-border/40 space-y-4">
                         <div>
-                            <Label className="text-[10px] font-black uppercase text-slate-500 mb-2 block">
-                                Manual Discount
-                            </Label>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="space-y-1">
-                                    <Label className="text-[9px] text-slate-400">Amount ($)</Label>
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-bold text-slate-400">$</span>
+                            <Label className="text-sm font-medium mb-3 block">Order Discount</Label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-2">
+                                    <Label className="text-xs text-muted-foreground">Amount ($)</Label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                                         <Input 
                                             type="number" 
                                             min="0" 
                                             step="0.01"
-                                            className="h-8 text-right font-bold" 
+                                            className="pl-8 h-10" 
                                             value={manualDiscountAmount} 
                                             onChange={(e) => {
                                                 setManualDiscountAmount(e.target.value);
@@ -813,88 +1082,103 @@ const presetRemark = item.selected_presets.map(preset => {
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <Label className="text-[9px] text-slate-400">Percentage (%)</Label>
-                                    <div className="flex items-center gap-2">
+                                <div className="space-y-2">
+                                    <Label className="text-xs text-muted-foreground">Percentage (%)</Label>
+                                    <div className="relative">
                                         <Input 
                                             type="number" 
                                             min="0" 
                                             max="100" 
                                             step="0.1"
-                                            className="h-8 text-right font-bold" 
+                                            className="pr-8 h-10 text-right" 
                                             value={manualDiscountPercentage} 
                                             onChange={(e) => {
                                                 setManualDiscountPercentage(e.target.value);
                                                 if (e.target.value) setManualDiscountAmount('0');
                                             }} 
                                         />
-                                        <span className="font-bold text-slate-400">%</span>
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="p-6 bg-slate-900 text-white rounded-t-3xl space-y-3 shadow-2xl">
+                    {/* Order Summary */}
+                    <div className="p-6 bg-primary/5 dark:bg-primary/10 border-t border-border/40 space-y-3">
                         <div className="space-y-2">
-                            <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                <span>Subtotal</span>
-                                <span>${subtotal.toFixed(2)}</span>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Subtotal</span>
+                                <span className="font-medium">${subtotal.toFixed(2)}</span>
                             </div>
                             
+                            {modifiersTotal > 0 && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Add-ons</span>
+                                    <span className="font-medium text-green-600 dark:text-green-400">+${modifiersTotal.toFixed(2)}</span>
+                                </div>
+                            )}
+
                             {itemDiscountTotal > 0 && (
-                                <div className="flex justify-between text-[10px] font-bold text-green-400">
-                                    <span>Item Discount</span>
-                                    <span>-${itemDiscountTotal.toFixed(2)}</span>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Item Discount</span>
+                                    <span className="font-medium text-green-600 dark:text-green-400">-${itemDiscountTotal.toFixed(2)}</span>
                                 </div>
                             )}
                             
                             {orderLevelDiscount > 0 && (
-                                <div className="flex justify-between text-[10px] font-bold text-blue-400">
-                                    <span>Order Discount</span>
-                                    <span>-${orderLevelDiscount.toFixed(2)}</span>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Order Discount</span>
+                                    <span className="font-medium text-blue-600 dark:text-blue-400">-${orderLevelDiscount.toFixed(2)}</span>
                                 </div>
                             )}
                             
                             {deliveryPartnerDiscount > 0 && (
-                                <div className="flex justify-between text-[10px] font-bold text-yellow-400">
-                                    <span>Partner Discount</span>
-                                    <span>-${deliveryPartnerDiscount.toFixed(2)}</span>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Partner Discount</span>
+                                    <span className="font-medium text-amber-600 dark:text-amber-400">-${deliveryPartnerDiscount.toFixed(2)}</span>
+                                </div>
+                            )}
+
+                            <div className="flex justify-between text-sm font-medium pt-2 border-t border-border/40">
+                                <span>Total Discount</span>
+                                <span className="text-red-600 dark:text-red-400">-${totalDiscount.toFixed(2)}</span>
+                            </div>
+
+                            {taxIsActive && taxAmount > 0 && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">{taxName} ({taxRate}%)</span>
+                                    <span className="font-medium">${taxAmount.toFixed(2)}</span>
                                 </div>
                             )}
                             
-                            <div className="flex justify-between text-sm font-bold pt-2 border-t border-slate-800">
-                                <span>Total Discount</span>
-                                <span className="text-red-400">-${totalDiscount.toFixed(2)}</span>
-                            </div>
-                            
-                            <div className="flex justify-between text-lg font-black pt-2 border-t border-slate-800">
+                            <div className="flex justify-between text-lg font-semibold pt-3 border-t border-border/40">
                                 <span>TOTAL</span>
-                                <span className="text-primary underline decoration-primary decoration-4 underline-offset-4">
-                                    ${(subtotal - totalDiscount).toFixed(2)}
-                                </span>
+                                <span className="text-primary">${finalTotal.toFixed(2)}</span>
                             </div>
                         </div>
                         
-                        <p className="text-[10px] text-slate-400 text-center pt-2">
-                            Tax will be calculated on final amount
-                        </p>
-                        
                         <Button 
-                            className="w-full h-14 text-lg font-black mt-4 uppercase tracking-tighter shadow-lg hover:shadow-xl transition-all" 
+                            className="w-full h-12 text-base font-semibold mt-4" 
                             disabled={cart.length === 0 || checkoutLoading} 
                             onClick={handleCheckout}
                         >
                             {checkoutLoading ? (
                                 <>
-                                    <Loader2 className="mr-2 animate-spin" /> PROCESSING...
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Processing...
                                 </>
                             ) : (
                                 <>
-                                    <CreditCard className="mr-2" /> COMPLETE ORDER
+                                    <CreditCard className="mr-2 h-4 w-4" />
+                                    Complete Order
                                 </>
                             )}
                         </Button>
+                        
+                        <p className="text-xs text-center text-muted-foreground pt-2">
+                            {taxIsActive ? `Tax (${taxRate}%) included` : 'No tax applied'}
+                        </p>
                     </div>
                 </Card>
             </div>

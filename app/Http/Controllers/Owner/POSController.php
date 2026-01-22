@@ -230,7 +230,8 @@ class POSController extends Controller
 
         return response()->json([
             'categories' => $categories,
-            'products' => $products
+            'products' => $products,
+            'branch' => $branch
         ]);
     }
 
@@ -238,7 +239,7 @@ public function store(Request $request, TelegramService $telegram)
 {
     $validator = Validator::make($request->all(), [
         'branch_id' => 'required|exists:branches,id',
-        'order_type' => 'required|in:walk_in,delivery',
+        'order_type' => 'required|in:walk_in,delivery,takeaway',
         'delivery_partner_id' => 'nullable|exists:delivery_partners,id',
         'table_id' => 'nullable|exists:restaurant_tables,id',
         'items' => 'required|array|min:1',
@@ -247,20 +248,18 @@ public function store(Request $request, TelegramService $telegram)
         'items.*.selected_size' => 'nullable|array',
         'items.*.selected_modifiers' => 'nullable|array',
         'items.*.remark' => 'nullable|string',
+        // FIX: Allow the frontend to pass the 5% discount
+        'items.*.discount_percentage' => 'nullable|numeric|min:0|max:100', 
         'order_discount_amount' => 'nullable|numeric|min:0',
         'order_discount_percentage' => 'nullable|numeric|min:0|max:100',
         'delivery_partner_discount' => 'nullable|numeric|min:0',
     ]);
 
     if ($validator->fails()) {
-        return response()->json([
-            'message' => 'Validation failed',
-            'errors' => $validator->errors()
-        ], 422);
+        return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
     }
 
     return DB::transaction(function () use ($request, $telegram) {
-
         $round = fn ($v) => round((float)$v, 2);
         $branch = Branch::findOrFail($request->branch_id);
         $taxRate = (float) ($branch->tax_rate ?? 0);
@@ -268,6 +267,20 @@ public function store(Request $request, TelegramService $telegram)
 
         $subtotal = 0;
         $itemDiscountTotal = 0;
+
+        // --- Order Code Logic (Kept your original logic) ---
+        $yearDigit = now()->format('y')[1];
+        $months = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+        $monthLetter = $months[intval(now()->format('m')) - 1]; 
+        $day = now()->format('d');
+        $seq = 1;
+        $orderCode = '';
+        for ($i = 0; $i < 1000; $i++) {
+            $seqFormatted = str_pad($seq, 3, '0', STR_PAD_LEFT);
+            $orderCodeCandidate = "$yearDigit$monthLetter$day$seqFormatted";
+            if (!Order::where('order_code', $orderCodeCandidate)->exists()) { $orderCode = $orderCodeCandidate; break; }
+            $seq++;
+        }
 
         $order = Order::create([
             'branch_id' => $request->branch_id,
@@ -284,98 +297,62 @@ public function store(Request $request, TelegramService $telegram)
             'order_discount_amount' => 0,
             'tax_rate' => $taxRate,
             'tax_amount' => 0,
+            'order_code' => $orderCode,
         ]);
 
         foreach ($request->items as $item) {
             $product = Product::findOrFail($item['product_id']);
-            $branchProduct = BranchProduct::where('branch_id', $branch->id)
-                ->where('product_id', $product->id)
-                ->firstOrFail();
-
-            if (!$branchProduct->is_available) {
-                throw new \Exception("{$product->name} not available");
-            }
+            $branchProduct = BranchProduct::where('branch_id', $branch->id)->where('product_id', $product->id)->firstOrFail();
 
             $basePrice = $branchProduct->branch_price ?? $product->base_price;
-            $originalProductPrice = $basePrice;
             $discountPercentage = 0;
             $hasActiveDiscount = false;
-            $appliedDiscountType = 'product';
 
-            $branchProductSizeId = null;
+            // 1. Check for Size Override
             $sizeId = $item['selected_size']['id'] ?? null;
             $sizeName = null;
+            $branchProductSizeId = null;
 
-            // --- 1. Size Logic (To get size_name for Remark) ---
             if ($sizeId) {
-                $branchProductSize = BranchProductSize::where('branch_product_id', $branchProduct->id)
-                    ->where('size_id', $sizeId)
-                    ->first();
-
+                $branchProductSize = BranchProductSize::where('branch_product_id', $branchProduct->id)->where('size_id', $sizeId)->first();
                 if ($branchProductSize) {
-                    if (!$branchProductSize->is_available) {
-                        throw new \Exception("Selected size unavailable");
-                    }
-                    if ($branchProductSize->branch_size_price !== null) {
-                        $basePrice = $branchProductSize->branch_size_price;
-                        $originalProductPrice = $basePrice;
-                    }
-                    if ($branchProductSize->is_discount_active && $branchProductSize->discount_percentage > 0) {
+                    $basePrice = $branchProductSize->branch_size_price ?? $basePrice;
+                    if ($branchProductSize->is_discount_active) {
                         $discountPercentage = $branchProductSize->discount_percentage;
                         $hasActiveDiscount = true;
-                        $appliedDiscountType = 'branch_product_size';
                     }
                     $branchProductSizeId = $branchProductSize->id;
-                    
-                    // Fetch name from Size model for remark string
                     $sizeModel = Size::find($sizeId);
                     $sizeName = $sizeModel ? $sizeModel->name : null;
                 }
+            } elseif ($branchProduct->has_active_discount) {
+                // Fix: Check product-level discount if no size is selected
+                $discountPercentage = $branchProduct->discount_percentage;
+                $hasActiveDiscount = true;
             }
 
-            // --- 2. Modifier Logic (To get names for Remark) ---
+            // 2. Override with MANUAL discount from POS frontend
+            if (isset($item['discount_percentage']) && $item['discount_percentage'] > 0) {
+                $discountPercentage = $item['discount_percentage'];
+                $hasActiveDiscount = true;
+            }
+
+            // 3. Calculation
             $modifierTotalPrice = 0;
             $selectedModifiersData = [];
-
             foreach ($item['selected_modifiers'] ?? [] as $modifierId) {
                 $modifier = Modifier::find($modifierId);
                 if ($modifier && $modifier->is_available) {
                     $modifierTotalPrice += $modifier->price;
-                    $selectedModifiersData[] = [
-                        'id' => $modifier->id,
-                        'name' => $modifier->name,
-                        'price' => $modifier->price
-                    ];
+                    $selectedModifiersData[] = ['id' => $modifier->id, 'name' => $modifier->name, 'price' => $modifier->price];
                 }
             }
 
-            $modifierTotalPrice = $round($modifierTotalPrice);
-
-            // --- 3. Calculation Logic ---
             $itemSubtotal = $round(($basePrice + $modifierTotalPrice) * $item['quantity']);
-            $itemDiscount = 0;
-            if ($hasActiveDiscount && $discountPercentage > 0) {
-                $itemDiscount = $round(($basePrice * ($discountPercentage / 100)) * $item['quantity']);
-            }
+            $itemDiscount = $hasActiveDiscount ? $round(($basePrice * ($discountPercentage / 100)) * $item['quantity']) : 0;
             $itemFinalPrice = $round($itemSubtotal - $itemDiscount);
             $finalUnitPrice = $round($itemFinalPrice / $item['quantity']);
 
-            // --- 4. UPDATED REMARK LOGIC ---
-            $customizationParts = [];
-            
-            if ($sizeName) {
-                $customizationParts[] = "[Size: $sizeName]";
-            }
-            
-            if (!empty($selectedModifiersData)) {
-                $modifierNames = array_column($selectedModifiersData, 'name');
-                $customizationParts[] = "+ " . implode(', ', $modifierNames);
-            }
-            
-            $customizationString = implode(' ', $customizationParts);
-            $finalRemark = trim($customizationString . ' ' . ($item['remark'] ?? ''));
-
-            // --- 5. Save to Database ---
             OrderItem::create([
                 'order_id' => $order->id,
                 'product_id' => $product->id,
@@ -383,24 +360,21 @@ public function store(Request $request, TelegramService $telegram)
                 'size_id' => $sizeId,
                 'size_name' => $sizeName,
                 'base_price' => $round($basePrice),
-                'original_product_price' => $round($originalProductPrice),
-                'modifier_total_price' => $modifierTotalPrice,
+                'original_product_price' => $round($basePrice),
+                'modifier_total_price' => $round($modifierTotalPrice),
                 'item_discount_amount' => $itemDiscount,
                 'applied_discount_percentage' => $discountPercentage,
-                'applied_discount_type' => $appliedDiscountType,
                 'final_unit_price' => $finalUnitPrice,
                 'quantity' => $item['quantity'],
                 'selected_modifiers' => $selectedModifiersData,
-                'remark' => $finalRemark // Combined customization + note
+                'remark' => trim(($sizeName ? "[Size: $sizeName] " : "") . ($item['remark'] ?? ''))
             ]);
 
             $subtotal += $itemSubtotal;
             $itemDiscountTotal += $itemDiscount;
         }
 
-        // Final Totals calculation
-        $subtotal = $round($subtotal);
-        $itemDiscountTotal = $round($itemDiscountTotal);
+        // Final Totals
         $orderLevelDiscount = 0;
         if (($request->order_discount_amount ?? 0) > 0) {
             $orderLevelDiscount = $round($request->order_discount_amount);
@@ -409,11 +383,8 @@ public function store(Request $request, TelegramService $telegram)
         }
 
         $totalDiscount = $round($itemDiscountTotal + $orderLevelDiscount + ($request->delivery_partner_discount ?? 0));
-        $taxableAmount = $round($subtotal - $totalDiscount);
-        $taxAmount = 0;
-        if ($taxIsActive && $taxRate > 0) {
-            $taxAmount = $round($taxableAmount * ($taxRate / 100));
-        }
+        $taxableAmount = $subtotal - $totalDiscount;
+        $taxAmount = ($taxIsActive && $taxRate > 0) ? $round($taxableAmount * ($taxRate / 100)) : 0;
         $total = $round($taxableAmount + $taxAmount);
 
         $order->update([
@@ -424,15 +395,11 @@ public function store(Request $request, TelegramService $telegram)
             'tax_amount' => $taxAmount,
             'total' => $total
         ]);
-        
-        $telegram->sendOrderNotification(order: $order);
-        broadcast(new NewOrderRegistered($order))->toOthers();
 
-        return response()->json([
-            'message' => 'Order placed successfully',
-            'order_id' => $order->id,
-            'total' => number_format($total, 2, '.', '')
-        ]);
+        return response()->json(['message' => 'Order placed', 
+        'order_id' => $order->id, 
+        'order_code' => $orderCode,
+        'total' => number_format($total, 2, '.', '')]);
     });
 }
 

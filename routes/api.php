@@ -24,6 +24,7 @@ use App\Http\Controllers\Owner\TagController;
 use App\Http\Controllers\Owner\SizeController;
 use App\Http\Controllers\Owner\BranchProductSizeApiController;
 use App\Http\Controllers\Owner\ReceiptSettingController;
+use App\Http\Controllers\Owner\ReceiptPrintController;
 
 /*
 |--------------------------------------------------------------------------
@@ -178,6 +179,10 @@ Route::middleware('auth:sanctum')->group(function () {
                 Route::get('/orders/live', [App\Http\Controllers\Owner\OrderController::class, 'liveMonitorIndex']);
                 Route::get('/orders/history', [App\Http\Controllers\Owner\OrderController::class, 'index']);
                 Route::post('/pos/order', [POSController::class, 'store']);
+                Route::get('/orders/{order}/print-receipt', [ReceiptPrintController::class, 'printReceipt']);
+                Route::get('/orders/{order}/thermal-print', [ReceiptPrintController::class, 'printThermalReceipt']);
+                Route::get('/receipt-settings/print', [ReceiptPrintController::class, 'getReceiptSettings']);
+                Route::post('/orders/batch-print', [ReceiptPrintController::class, 'batchPrint']);
                 Route::get('/pos_delivery-partners', [DeliveryPartnerController::class,'data_for_pos']);
                 Route::middleware('permission:orders,update')->group(function () { // Fixed: orders,update
                 Route::patch('/orders/{id}/status', [App\Http\Controllers\Owner\OrderController::class, 'updateStatus']);

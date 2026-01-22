@@ -1,21 +1,54 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Printer, Save, Upload, Type, Palette, Maximize, Loader2, QrCode, ImageIcon } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  Printer, 
+  Save, 
+  Upload, 
+  Type, 
+  Palette, 
+  Maximize, 
+  Loader2, 
+  QrCode, 
+  ImageIcon,
+  Download,
+  Eye,
+  Settings,
+  PaintBucket,
+  Layout,
+  Smartphone,
+  Tablet,
+  Monitor
+} from 'lucide-react';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle,
+  CardDescription 
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { useReactToPrint } from 'react-to-print';
 import { ThermalReceipt } from '@/components/printing/ThermalReceipt';
-// POINT: Using shadcn toast instead of sonner
 import { useToast } from "@/hooks/use-toast";
 import api from '@/util/api';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const ReceiptSettings = () => {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [brandingPresets, setBrandingPresets] = useState<any>({ colors: [], fonts: [], store_name: '' });
+    const [previewDevice, setPreviewDevice] = useState<"mobile" | "tablet" | "desktop">("desktop");
+    const [brandingPresets, setBrandingPresets] = useState<any>({ 
+      colors: [], 
+      fonts: [], 
+      store_name: '' 
+    });
     
     const [settings, setSettings] = useState({
         store_name: '',
@@ -23,19 +56,30 @@ const ReceiptSettings = () => {
         footer_text: '',
         primary_color: '#000000',
         font_size_base: 14,
-        font_family: 'font-mono', 
+        font_family: 'font-mono',
         logo_size: 80,
         qr_code_size: 90,
         show_logo: true,
-        logo_url: null,
-        qr_code_url: null
+        show_qr: true,
+        show_header: true,
+        show_footer: true,
+        show_border: false,
+        show_customer_info: false,
+        paper_width: 80,
+        margin_size: 10,
+        logo_url: null as string | null,
+        qr_code_url: null as string | null,
+        logo_file: null as File | null,
+        qr_code_file: null as File | null
     });
 
     const componentRef = useRef<HTMLDivElement>(null);
     const logoInputRef = useRef<HTMLInputElement>(null);
     const qrInputRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => { fetchSettings(); }, []);
+    useEffect(() => { 
+      fetchSettings(); 
+    }, []);
 
     const fetchSettings = async () => {
         try {
@@ -43,8 +87,14 @@ const ReceiptSettings = () => {
             if (res.data.settings) setSettings(res.data.settings);
             if (res.data.branding_presets) setBrandingPresets(res.data.branding_presets);
         } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "Failed to load settings" });
-        } finally { setLoading(false); }
+            toast({ 
+              variant: "destructive", 
+              title: "Error", 
+              description: "Failed to load receipt settings" 
+            });
+        } finally { 
+          setLoading(false); 
+        }
     };
 
     const handlePrint = useReactToPrint({ contentRef: componentRef });
@@ -56,132 +106,757 @@ const ReceiptSettings = () => {
         Object.entries(settings).forEach(([key, value]) => {
             if (!key.includes('_url') && !key.endsWith('_file')) {
                 let val = value;
-                // POINT: Boolean to '1'/'0' conversion for Laravel
                 if (typeof value === 'boolean') val = value ? '1' : '0';
                 formData.append(key, val === null ? '' : String(val));
             }
         });
 
-        if (settings['logo_file' as keyof typeof settings]) {
-            formData.append('logo', settings['logo_file' as keyof typeof settings]);
+        if (settings.logo_file) {
+            formData.append('logo', settings.logo_file);
         }
-        if (settings['qr_code_file' as keyof typeof settings]) {
-            formData.append('qr_code', settings['qr_code_file' as keyof typeof settings]);
+        if (settings.qr_code_file) {
+            formData.append('qr_code', settings.qr_code_file);
         }
 
         try {
             const res = await api.post('/admin/settings/receipt', formData, { 
                 headers: { 'Content-Type': 'multipart/form-data' } 
             });
-            toast({ title: "Success", description: "Receipt settings updated!" });
+            toast({ 
+              title: "Success", 
+              description: "Receipt settings saved successfully" 
+            });
             setSettings(res.data.settings);
-        } catch (error) { 
-            toast({ variant: "destructive", title: "Error", description: "Could not save settings" });
+        } catch (error: any) { 
+            toast({ 
+              variant: "destructive", 
+              title: "Error", 
+              description: error.response?.data?.message || "Could not save settings" 
+            });
         } finally { 
             setSaving(false); 
         }
     };
 
-    if (loading) return <div className="h-96 flex items-center justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
+    const handleFileUpload = (type: 'logo' | 'qr', file: File) => {
+        const url = URL.createObjectURL(file);
+        if (type === 'logo') {
+            setSettings({
+                ...settings,
+                logo_file: file,
+                logo_url: url
+            });
+        } else {
+            setSettings({
+                ...settings,
+                qr_code_file: file,
+                qr_code_url: url
+            });
+        }
+    };
+
+    const getDeviceDimensions = () => {
+      switch (previewDevice) {
+        case 'mobile': return { 
+          width: '280px',
+          height: '560px',
+          scale: 0.8
+        };
+        case 'tablet': return { 
+          width: '512px',
+          height: '683px',
+          scale: 0.7
+        };
+        case 'desktop': return { 
+          width: '720px',
+          height: '480px',
+          scale: 0.8
+        };
+        default: return { 
+          width: '280px', 
+          height: '560px',
+          scale: 0.8
+        };
+      }
+    };
+
+    if (loading) return (
+      <div className="h-96 flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="animate-spin h-10 w-10 text-primary" />
+        <p className="text-muted-foreground">Loading receipt settings...</p>
+      </div>
+    );
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
+        <div className="space-y-8">
+            {/* Header Section */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900">Receipt Designer</h1>
-                    <p className="text-slate-500 italic">Branch: {brandingPresets.store_name}</p>
+                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+                        <Printer className="h-8 w-8 text-primary" />
+                        Receipt Designer
+                    </h1>
+                    <p className="text-muted-foreground mt-2">
+                        Customize receipt appearance for {brandingPresets.store_name || 'your store'}
+                    </p>
                 </div>
                 <div className="flex gap-3">
-                    <Button variant="outline" onClick={() => handlePrint()} className="gap-2"><Printer size={18} /> Test Print</Button>
-                    <Button onClick={handleSave} disabled={saving} className="gap-2 px-8">
-                        {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} 
+                    <Button 
+                      variant="outline" 
+                      onClick={() => handlePrint()} 
+                      className="gap-2"
+                    >
+                        <Printer className="h-4 w-4" />
+                        Test Print
+                    </Button>
+                    <Button 
+                      onClick={handleSave} 
+                      disabled={saving} 
+                      className="gap-2 px-6"
+                    >
+                        {saving ? (
+                            <Loader2 className="animate-spin h-4 w-4" />
+                        ) : (
+                            <Save className="h-4 w-4" />
+                        )}
                         Save Changes
                     </Button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                <div className="lg:col-span-7 space-y-6">
-                    <Card>
-                        <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Palette size={18}/> Branding & Presets</CardTitle></CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="space-y-3">
-                                <Label>Primary Color (Select a circle to use branch brand)</Label>
-                                <div className="flex flex-wrap gap-3 items-center p-3 border rounded-lg bg-slate-50/50">
-                                    <Input type="color" value={settings.primary_color} onChange={(e) => setSettings({...settings, primary_color: e.target.value})} className="w-12 h-10 p-1 cursor-pointer" />
-                                    <div className="h-8 w-[1px] bg-slate-200 mx-2" />
-                                    {brandingPresets.colors.map((color: string) => (
-                                        <button key={color} onClick={() => setSettings({...settings, primary_color: color})} className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${settings.primary_color === color ? 'border-slate-900 ring-2 ring-slate-200' : 'border-white'}`} style={{ backgroundColor: color }} />
-                                    ))}
-                                </div>
-                            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Left Column - Settings (70%) */}
+                <div className="lg:col-span-8 space-y-6">
+                    <Tabs defaultValue="branding" className="w-full">
+                        <TabsList className="grid w-full grid-cols-3">
+                            <TabsTrigger value="branding" className="gap-2">
+                                <PaintBucket className="h-3 w-3" />
+                                Branding
+                            </TabsTrigger>
+                            <TabsTrigger value="layout" className="gap-2">
+                                <Layout className="h-3 w-3" />
+                                Layout
+                            </TabsTrigger>
+                            <TabsTrigger value="content" className="gap-2">
+                                <Type className="h-3 w-3" />
+                                Content
+                            </TabsTrigger>
+                        </TabsList>
 
-                            <div className="space-y-3">
-                                <Label>Font Styles (Including Branch Fonts)</Label>
-                                <div className="flex flex-wrap gap-2">
-                                    {['font-mono', 'font-sans', 'font-serif', ...brandingPresets.fonts].map((font) => (
-                                        <Button key={font} variant={settings.font_family === font ? 'default' : 'outline'} size="sm" className={`text-xs ${font}`} onClick={() => setSettings({...settings, font_family: font})}>
-                                            {font.replace('font-', '').toUpperCase()}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                        <TabsContent value="branding" className="space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Palette className="h-4 w-4" />
+                                        Color & Typography
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Match your receipt with your brand identity
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-base">Primary Color</Label>
+                                            <Badge variant="outline" className="text-xs">
+                                                Branch Colors Available
+                                            </Badge>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-4 p-4 rounded-lg border bg-card">
+                                            <Input
+                                                type="color"
+                                                value={settings.primary_color}
+                                                onChange={(e) => setSettings({...settings, primary_color: e.target.value})}
+                                                className="w-16 h-16 p-1 cursor-pointer rounded-lg"
+                                            />
+                                            <div className="flex-1">
+                                                <Label className="text-sm text-muted-foreground mb-2 block">
+                                                    Color Value
+                                                </Label>
+                                                <Input
+                                                    value={settings.primary_color}
+                                                    onChange={(e) => setSettings({...settings, primary_color: e.target.value})}
+                                                    className="font-mono"
+                                                />
+                                            </div>
+                                        </div>
 
-                    <Card>
-                        <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Maximize size={18}/> Asset Sizes</CardTitle></CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-4">
-                                <Label>Logo Width: {settings.logo_size}px</Label>
-                                <div onClick={() => logoInputRef.current?.click()} className="border-2 border-dashed rounded-xl h-24 flex items-center justify-center cursor-pointer bg-slate-50">
-                                    {settings.logo_url ? <img src={settings.logo_url} className="h-full object-contain p-2" /> : <Upload className="text-slate-400" />}
-                                    <input type="file" ref={logoInputRef} hidden onChange={(e) => { 
-                                        const file = e.target.files?.[0]; 
-                                        if (file) setSettings({...settings, logo_file: file, logo_url: URL.createObjectURL(file)}); 
-                                    }} />
-                                </div>
-                                <Slider value={[settings.logo_size]} min={40} max={180} onValueChange={([v]) => setSettings({...settings, logo_size: v})} />
-                            </div>
-                            <div className="space-y-4">
-                                <Label>QR Width: {settings.qr_code_size}px</Label>
-                                <div onClick={() => qrInputRef.current?.click()} className="border-2 border-dashed rounded-xl h-24 flex items-center justify-center cursor-pointer bg-slate-50">
-                                    {settings.qr_code_url ? <img src={settings.qr_code_url} className="h-full object-contain p-2" /> : <QrCode className="text-slate-400" />}
-                                    <input type="file" ref={qrInputRef} hidden onChange={(e) => { 
-                                        const file = e.target.files?.[0]; 
-                                        if (file) setSettings({...settings, qr_code_file: file, qr_code_url: URL.createObjectURL(file)}); 
-                                    }} />
-                                </div>
-                                <Slider value={[settings.qr_code_size]} min={40} max={180} onValueChange={([v]) => setSettings({...settings, qr_code_size: v})} />
-                            </div>
-                        </CardContent>
-                    </Card>
+                                        {/* Brand Color Presets */}
+                                        {brandingPresets.colors.length > 0 && (
+                                            <div className="space-y-3">
+                                                <Label className="text-sm">Quick Select - Brand Colors</Label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {brandingPresets.colors.map((color: string, index: number) => (
+                                                        <button
+                                                            key={index}
+                                                            onClick={() => setSettings({...settings, primary_color: color})}
+                                                            className={`relative w-10 h-10 rounded-full border-2 transition-all hover:scale-110 hover:shadow-md ${
+                                                                settings.primary_color === color 
+                                                                    ? 'border-primary ring-2 ring-primary/20' 
+                                                                    : 'border-muted'
+                                                            }`}
+                                                            style={{ backgroundColor: color }}
+                                                            title={`Brand Color ${index + 1}`}
+                                                        >
+                                                            {settings.primary_color === color && (
+                                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                                    <div className="w-4 h-4 bg-white rounded-full" />
+                                                                </div>
+                                                            )}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <Separator />
+
+                                        <div className="space-y-4">
+                                            <Label className="text-base">Typography</Label>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-3">
+                                                    <Label>Font Family</Label>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {['font-mono', 'font-sans', 'font-serif', ...brandingPresets.fonts].map((font) => (
+                                                            <Button
+                                                                key={font}
+                                                                variant={settings.font_family === font ? "default" : "outline"}
+                                                                size="sm"
+                                                                className={`text-xs ${font} transition-all`}
+                                                                onClick={() => setSettings({...settings, font_family: font})}
+                                                            >
+                                                                {font.replace('font-', '').replace(/([A-Z])/g, ' $1').trim()}
+                                                            </Button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <Label>Base Font Size: {settings.font_size_base}px</Label>
+                                                    <Slider
+                                                        value={[settings.font_size_base]}
+                                                        min={10}
+                                                        max={20}
+                                                        step={1}
+                                                        onValueChange={([v]) => setSettings({...settings, font_size_base: v})}
+                                                    />
+                                                    <div className="flex justify-between text-xs text-muted-foreground">
+                                                        <span>Small</span>
+                                                        <span>Medium</span>
+                                                        <span>Large</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <ImageIcon className="h-4 w-4" />
+                                        Images & Assets
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Upload and customize logos and QR codes
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Logo Settings */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <Label>Logo</Label>
+                                                <Switch
+                                                    checked={settings.show_logo}
+                                                    onCheckedChange={(checked) => setSettings({...settings, show_logo: checked})}
+                                                />
+                                            </div>
+                                            <div
+                                                onClick={() => logoInputRef.current?.click()}
+                                                className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors min-h-[180px]"
+                                            >
+                                                {settings.logo_url ? (
+                                                    <>
+                                                        <img
+                                                            src={settings.logo_url}
+                                                            alt="Logo preview"
+                                                            className="max-h-24 object-contain mb-4"
+                                                        />
+                                                        <p className="text-sm text-muted-foreground">Click to change</p>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Upload className="h-12 w-12 text-muted-foreground mb-3" />
+                                                        <p className="text-sm font-medium">Upload Logo</p>
+                                                        <p className="text-xs text-muted-foreground mt-1 text-center">
+                                                            PNG, JPG up to 5MB
+                                                        </p>
+                                                    </>
+                                                )}
+                                                <input
+                                                    type="file"
+                                                    ref={logoInputRef}
+                                                    hidden
+                                                    accept="image/*"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) handleFileUpload('logo', file);
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Logo Size: {settings.logo_size}px</Label>
+                                                <Slider
+                                                    value={[settings.logo_size]}
+                                                    min={40}
+                                                    max={180}
+                                                    step={10}
+                                                    onValueChange={([v]) => setSettings({...settings, logo_size: v})}
+                                                    disabled={!settings.show_logo}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* QR Code Settings */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <Label>QR Code</Label>
+                                                <Switch
+                                                    checked={settings.show_qr}
+                                                    onCheckedChange={(checked) => setSettings({...settings, show_qr: checked})}
+                                                />
+                                            </div>
+                                            <div
+                                                onClick={() => qrInputRef.current?.click()}
+                                                className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors min-h-[180px]"
+                                            >
+                                                {settings.qr_code_url ? (
+                                                    <>
+                                                        <img
+                                                            src={settings.qr_code_url}
+                                                            alt="QR code preview"
+                                                            className="max-h-24 object-contain mb-4"
+                                                        />
+                                                        <p className="text-sm text-muted-foreground">Click to change</p>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <QrCode className="h-12 w-12 text-muted-foreground mb-3" />
+                                                        <p className="text-sm font-medium">Upload QR Code</p>
+                                                        <p className="text-xs text-muted-foreground mt-1 text-center">
+                                                            PNG, JPG up to 5MB
+                                                        </p>
+                                                    </>
+                                                )}
+                                                <input
+                                                    type="file"
+                                                    ref={qrInputRef}
+                                                    hidden
+                                                    accept="image/*"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) handleFileUpload('qr', file);
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>QR Code Size: {settings.qr_code_size}px</Label>
+                                                <Slider
+                                                    value={[settings.qr_code_size]}
+                                                    min={40}
+                                                    max={180}
+                                                    step={10}
+                                                    onValueChange={([v]) => setSettings({...settings, qr_code_size: v})}
+                                                    disabled={!settings.show_qr}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        <TabsContent value="layout" className="space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Settings className="h-4 w-4" />
+                                        Layout Settings
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Configure receipt dimensions and structure
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-4">
+                                            <Label>Paper Width: {settings.paper_width}mm</Label>
+                                            <Slider
+                                                value={[settings.paper_width]}
+                                                min={58}
+                                                max={110}
+                                                step={1}
+                                                onValueChange={([v]) => setSettings({...settings, paper_width: v})}
+                                            />
+                                            <div className="flex justify-between text-xs text-muted-foreground">
+                                                <span>58mm (Standard)</span>
+                                                <span>80mm (Wide)</span>
+                                                <span>110mm (Extra Wide)</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <Label>Margin Size: {settings.margin_size}px</Label>
+                                            <Slider
+                                                value={[settings.margin_size]}
+                                                min={5}
+                                                max={30}
+                                                step={1}
+                                                onValueChange={([v]) => setSettings({...settings, margin_size: v})}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <Separator />
+
+                                    <div className="space-y-4">
+                                        <Label className="text-base">Visibility Options</Label>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="flex items-center justify-between p-3 rounded-lg border">
+                                                <div className="space-y-0.5">
+                                                    <Label>Show Header</Label>
+                                                    <p className="text-xs text-muted-foreground">Store name & info</p>
+                                                </div>
+                                                <Switch
+                                                    checked={settings.show_header}
+                                                    onCheckedChange={(checked) => setSettings({...settings, show_header: checked})}
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-between p-3 rounded-lg border">
+                                                <div className="space-y-0.5">
+                                                    <Label>Show Footer</Label>
+                                                    <p className="text-xs text-muted-foreground">Thank you message</p>
+                                                </div>
+                                                <Switch
+                                                    checked={settings.show_footer}
+                                                    onCheckedChange={(checked) => setSettings({...settings, show_footer: checked})}
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-between p-3 rounded-lg border">
+                                                <div className="space-y-0.5">
+                                                    <Label>Show Border</Label>
+                                                    <p className="text-xs text-muted-foreground">Receipt border</p>
+                                                </div>
+                                                <Switch
+                                                    checked={settings.show_border}
+                                                    onCheckedChange={(checked) => setSettings({...settings, show_border: checked})}
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-between p-3 rounded-lg border">
+                                                <div className="space-y-0.5">
+                                                    <Label>Show Customer Info</Label>
+                                                    <p className="text-xs text-muted-foreground">Customer Name and Info</p>
+                                                </div>
+                                                <Switch
+                                                    checked={settings.show_customer_info}
+                                                    onCheckedChange={(checked) => setSettings({...settings, show_customer_info: checked})}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        <TabsContent value="content" className="space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Type className="h-4 w-4" />
+                                        Text Content
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Customize header and footer text
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <Label>Store Name</Label>
+                                            <Input
+                                                value={settings.store_name}
+                                                onChange={(e) => setSettings({...settings, store_name: e.target.value})}
+                                                placeholder="Enter store name"
+                                                className="mt-2"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label>Header Text</Label>
+                                            <Input
+                                                value={settings.header_text}
+                                                onChange={(e) => setSettings({...settings, header_text: e.target.value})}
+                                                placeholder="Welcome to our store!"
+                                                className="mt-2"
+                                            />
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Appears at the top of the receipt
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <Label>Footer Text</Label>
+                                            <Input
+                                                value={settings.footer_text}
+                                                onChange={(e) => setSettings({...settings, footer_text: e.target.value})}
+                                                placeholder="Thank you for your purchase!"
+                                                className="mt-2"
+                                            />
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Appears at the bottom of the receipt
+                                            </p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    </Tabs>
                 </div>
 
-                <div className="lg:col-span-5 sticky top-6">
-                    <div className="bg-slate-100 rounded-[2.5rem] p-8 border-8 border-slate-200 shadow-inner flex justify-center">
-                        <div className={`bg-white w-[280px] min-h-[450px] shadow-xl p-6 relative ${settings.font_family}`} style={{ fontSize: `${settings.font_size_base}px`, color: settings.primary_color }}>
-                            <div className="text-center mb-6">
-                                {settings.logo_url && <img src={settings.logo_url} style={{ width: `${settings.logo_size}px` }} className="mx-auto mb-2" />}
-                                <h2 className="font-black uppercase">{settings.store_name || 'STORE NAME'}</h2>
+                {/* Right Column - Preview (30%) */}
+                <div className="lg:col-span-4 space-y-6">
+                    <Card className="sticky top-6">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Eye className="h-4 w-4" />
+                                Live Preview
+                            </CardTitle>
+                            <CardDescription>
+                                See how your receipt will appear
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {/* Device Toggle */}
+                            <div className="flex justify-center gap-2">
+                                <Button
+                                    variant={previewDevice === "mobile" ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setPreviewDevice("mobile")}
+                                    className="gap-2"
+                                >
+                                    <Smartphone className="h-3 w-3" />
+                                    Mobile
+                                </Button>
+                                <Button
+                                    variant={previewDevice === "tablet" ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setPreviewDevice("tablet")}
+                                    className="gap-2"
+                                >
+                                    <Tablet className="h-3 w-3" />
+                                    Tablet
+                                </Button>
+                                <Button
+                                    variant={previewDevice === "desktop" ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setPreviewDevice("desktop")}
+                                    className="gap-2"
+                                >
+                                    <Monitor className="h-3 w-3" />
+                                    Desktop
+                                </Button>
                             </div>
-                            <div className="border-y border-dashed py-4 border-slate-300 text-[11px] space-y-2">
-                                <div className="flex justify-between"><span>2x Espresso Shot</span><span>$4.00</span></div>
-                            </div>
-                            {settings.qr_code_url && (
-                                <div className="mt-6 flex flex-col items-center">
-                                    <img src={settings.qr_code_url} style={{ width: `${settings.qr_code_size}px` }} className="grayscale" />
+
+                            {/* Preview Container */}
+                            <div className="mt-4">
+                                <div className="flex justify-center items-center min-h-[400px] bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg p-4">
+                                    <div 
+                                        className="relative bg-white dark:bg-slate-800 overflow-hidden shadow-2xl mx-auto"
+                                        style={{
+                                            width: getDeviceDimensions().width,
+                                            height: getDeviceDimensions().height,
+                                            transform: `scale(${getDeviceDimensions().scale})`,
+                                            transformOrigin: 'top center',
+                                            border: settings.show_border ? '1px solid hsl(var(--border))' : 'none',
+                                            borderRadius: '0.375rem',
+                                        }}
+                                    >
+                                        {/* Receipt Preview */}
+                                        <div 
+                                            className={`h-full flex flex-col p-4 ${settings.font_family}`}
+                                            style={{ 
+                                                fontSize: `${settings.font_size_base}px`,
+                                                color: settings.primary_color,
+                                                backgroundColor: 'white',
+                                                maxWidth: `${settings.paper_width}mm`,
+                                                margin: `${settings.margin_size}px auto`
+                                            }}
+                                        >
+                                            {/* Header */}
+                                            {settings.show_header && (
+                                                <div className="text-center mb-4">
+                                                    {settings.show_logo && settings.logo_url && (
+                                                        <img 
+                                                            src={settings.logo_url} 
+                                                            style={{ width: `${settings.logo_size}px` }} 
+                                                            className="mx-auto mb-3 dark:invert" 
+                                                            alt="Logo"
+                                                        />
+                                                    )}
+                                                    <h2 className="font-bold text-lg uppercase tracking-wider">
+                                                        {settings.store_name || 'YOUR STORE'}
+                                                    </h2>
+                                                    {settings.header_text && (
+                                                        <p className="text-sm mt-2 text-muted-foreground">
+                                                            {settings.header_text}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <Separator className="my-4" />
+
+                                            {/* Order Items */}
+                                            <div className="space-y-3 flex-1">
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="font-semibold">Item</span>
+                                                    <span className="font-semibold">Amount</span>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    {[
+                                                        { name: 'Espresso Shot', price: '$4.00', qty: 2 },
+                                                        { name: 'Cappuccino', price: '$5.50', qty: 1 },
+                                                        { name: 'Blueberry Muffin', price: '$3.75', qty: 1 }
+                                                    ].map((item, index) => (
+                                                        <div key={index} className="flex justify-between items-center text-sm">
+                                                            <span>{item.qty}x {item.name}</span>
+                                                            <span>{item.price}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <Separator className="my-4" />
+
+                                            {/* Totals */}
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span>Subtotal</span>
+                                                    <span>$17.25</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span>Tax</span>
+                                                    <span>$1.38</span>
+                                                </div>
+                                                <div className="flex justify-between font-bold text-base">
+                                                    <span>TOTAL</span>
+                                                    <span>$18.63</span>
+                                                </div>
+                                            </div>
+
+                                            {/* QR Code */}
+                                            {settings.show_qr && settings.qr_code_url && (
+                                                <div className="mt-6 flex flex-col items-center">
+                                                    <img 
+                                                        src={settings.qr_code_url} 
+                                                        style={{ width: `${settings.qr_code_size}px` }} 
+                                                        className="dark:invert"
+                                                        alt="QR Code"
+                                                    />
+                                                    <p className="text-xs text-muted-foreground mt-2">
+                                                        Scan for digital receipt
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* Footer */}
+                                            {settings.show_footer && (
+                                                <>
+                                                    <Separator className="my-4" />
+                                                    <div className="text-center text-xs text-muted-foreground">
+                                                        {settings.footer_text || 'Thank you for your purchase!'}
+                                                        <p className="mt-2">
+                                                            {new Date().toLocaleDateString()} • Order #12345
+                                                        </p>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                    </div>
+                            </div>
+
+                            {/* Preview Info */}
+                            <div className="text-center text-sm text-muted-foreground pt-2">
+                                <p>Previewing: {previewDevice} view</p>
+                                <p className="text-xs mt-1">
+                                    Paper width: {settings.paper_width}mm • Font: {settings.font_size_base}px
+                                </p>
+                            </div>
+
+                            {/* Print Preview Note */}
+                            <div className="mt-4 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                                <p className="text-xs text-primary text-center">
+                                    <strong>Note:</strong> Thermal printers may render colors differently
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
-            <ThermalReceipt ref={componentRef} settings={settings} order={mockOrder} />
+
+            {/* Hidden Print Component */}
+            <div className="hidden">
+                <ThermalReceipt 
+                    ref={componentRef} 
+                    settings={settings} 
+                    order={mockOrder}
+                    branch={brandingPresets} // Pass branch info including contact_phone
+                    />
+            </div>
         </div>
     );
 };
 
-const mockOrder = { total: '4.00', items: [{ quantity: 2, total: '4.00', product: { name: 'Espresso Shot' } }] };
+// Update the mockOrder at the bottom of ReceiptSettings.tsx
+const mockOrder = { 
+  order_code: '12345',
+  total: '18.63',
+  subtotal: '17.25',
+  tax: '1.38',
+  table_number: 'A5',
+  order_type: 'dine_in', // 'dine_in', 'takeaway', or 'delivery'
+  payment_method: 'Cash',
+  payment_status: 'paid',
+  items: [
+    { 
+      quantity: 2, 
+      total: '8.00', 
+      product: { 
+        name: 'Espresso Shot',
+        price: '4.00'
+      } 
+    },
+    { 
+      quantity: 1, 
+      total: '5.50', 
+      product: { 
+        name: 'Cappuccino',
+        price: '5.50'
+      } 
+    },
+    { 
+      quantity: 1, 
+      total: '3.75', 
+      product: { 
+        name: 'Blueberry Muffin',
+        price: '3.75'
+      } 
+    }
+  ]
+};
+
+// When using ThermalReceipt in ReceiptSettings.tsx:
+
 
 export default ReceiptSettings;

@@ -14,76 +14,73 @@ class ReceiptPrintController extends Controller
     /**
      * Print receipt for a specific order
      */
-    public function printReceipt($orderId)
-    {
-        // Get the order with all necessary relationships
-        $order = Order::with([
-            'items.product',
-            'user',
-            'restaurantTable',
-            'deliveryPartner',
-            'creator'
-        ])->findOrFail($orderId);
+  /**
+ * Print receipt for a specific order
+ */
+public function printReceipt($orderId)
+{
+    $order = Order::with([
+        'items.product', 
+        'restaurantTable', 
+        'branch',
+        'deliveryPartner'
+    ])->findOrFail($orderId);
 
-        // Verify the order belongs to the user's branch
-        if ($order->branch_id !== auth()->user()->branch_id) {
-            abort(403, 'Unauthorized to view this order');
-        }
-
-        // Get receipt settings for the branch
-        $receiptSettings = ReceiptSetting::where('branch_id', $order->branch_id)->first();
-
-        // Get branch details for tax and address
-        $branch = Branch::find($order->branch_id);
-
-        // Prepare order data for receipt
-        $receiptData = [
-            'id' => $order->id,
-            'total' => number_format($order->total, 2),
-            'subtotal' => number_format($order->subtotal ?? $order->total, 2),
-            'tax' => number_format($order->tax ?? 0, 2),
-            'delivery_fee' => $order->delivery_fee ? number_format($order->delivery_fee, 2) : null,
-            'table_number' => $order->restaurantTable?->table_number,
-            'order_type' => $order->order_type,
-            'payment_method' => $order->payment_method,
-            'payment_status' => $order->payment_status,
-            'customer_name' => $order->customer_name,
-            'phone' => $order->phone,
-            'created_at' => $order->created_at,
-            'items' => $order->items->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'quantity' => $item->quantity,
-                    'total' => number_format($item->total, 2),
-                    'product' => [
-                        'name' => $item->product->name,
-                        'price' => number_format($item->product->price, 2),
-                    ]
-                ];
-            }),
-            'branch' => [
-                'branch_name' => $branch->branch_name,
-                'location' => $branch->location,
-                'contact_phone' => $branch->contact_phone,
-                'tax_name' => $branch->tax_name,
-                'tax_is_active' => $branch->tax_is_active,
-                'tax_rate' => $branch->tax_rate,
-            ]
-        ];
-
-        return response()->json([
-            'success' => true,
-            'order' => $receiptData,
-            'receipt_settings' => $receiptSettings,
-            'print_data' => [
-                'order_number' => $order->id,
-                'date' => $order->created_at->format('Y-m-d H:i:s'),
-                'total_amount' => $order->total,
-                'status' => $order->status,
-            ]
-        ]);
+    if ($order->branch_id !== auth()->user()->branch_id) {
+        abort(403, 'Unauthorized');
     }
 
+    $receiptSettings = ReceiptSetting::where('branch_id', $order->branch_id)->first();
+    $branch = $order->branch;
+
+    $receiptData = [
+        'id' => $order->id,
+        'order_code' => $order->order_code,
+        // Subtotal shows the sum of items AFTER item discounts but BEFORE order discounts
+        'subtotal' => number_format($order->subtotal - $order->item_discount_total, 2),
+        'order_level_discount' => number_format($order->order_level_discount, 2),
+        'delivery_partner_discount' => number_format($order->delivery_partner_discount, 2),
+        'tax_amount' => number_format($order->tax_amount, 2),
+        'tax_rate' => $order->tax_rate,
+        'total' => number_format($order->total, 2),
+        'order_type' => $order->order_type,
+        'table_number' => $order->restaurantTable?->table_number,
+        'created_at' => $order->created_at,
+        'items' => $order->items->map(function ($item) {
+            // selected_modifiers is stored as a JSON array in your DB
+            $modifiers = is_string($item->selected_modifiers) 
+                ? json_decode($item->selected_modifiers, true) 
+                : $item->selected_modifiers;
+
+            return [
+                'id' => $item->id,
+                'name' => $item->product->name,
+                'quantity' => $item->quantity,
+                // final_unit_price is the price after item-level discount
+                'price' => number_format($item->final_unit_price, 2),
+                'total' => number_format($item->item_total, 2),
+                'modifiers' => $modifiers ?? [],
+                'modifier_total' => number_format($item->modifier_total_price, 2),
+                'remark' => $item->remark,
+                'product' => ['name' => $item->product->name]
+            ];
+        }),
+    ];
+
+    return response()->json([
+        'success' => true,
+        'order' => $receiptData,
+        'receipt_settings' => $receiptSettings,
+        'branch' => [
+            'branch_name' => $branch->branch_name,
+            'location' => $branch->location,
+            'contact_phone' => $branch->contact_phone,
+            'tax_name' => $branch->tax_name,
+            'tax_is_active' => $branch->tax_is_active,
+            'tax_rate' => $branch->tax_rate,
+        ]
+    ]);
+}
     /**
      * Print receipt directly (for thermal printers)
      * This endpoint can be called by the thermal printer
