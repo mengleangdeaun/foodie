@@ -396,6 +396,10 @@ public function store(Request $request, TelegramService $telegram)
             'total' => $total
         ]);
 
+        $order->load(['items.product', 'restaurantTable', 'branch']);
+        $telegram->sendOrderNotification($order);
+        broadcast(new NewOrderRegistered($order))->toOthers();
+
         return response()->json(['message' => 'Order placed', 
         'order_id' => $order->id, 
         'order_code' => $orderCode,

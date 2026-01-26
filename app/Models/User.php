@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 namespace App\Models;
 
@@ -20,11 +20,12 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'owner_id',   
-        'branch_id',  
-        'role',       
+        'owner_id',
+        'branch_id',
+        'role',
         'permissions',
-        'is_active',  
+        'is_active',
+        'avatar',
     ];
 
     protected $hidden = [
@@ -67,7 +68,7 @@ class User extends Authenticatable
         return $this->belongsTo(Branch::class);
     }
 
-        public function orders()
+    public function orders()
     {
         return $this->hasMany(Order::class, 'user_id');
     }

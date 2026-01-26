@@ -3,7 +3,7 @@ import api from '@/util/api';
 import { useToast } from "@/hooks/use-toast";
 import ConfirmationModal from '@/components/ConfirmationModal';
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
-import { QRCodeCanvas } from 'qrcode.react'; 
+import { QRCodeCanvas } from 'qrcode.react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QrCode, Plus, Pencil, Trash2, Download, RefreshCw } from "lucide-react";
+import { QrCode, Plus, Pencil, Trash2, Download, RefreshCw, Copy, Link as LinkIcon, ExternalLink } from "lucide-react";
 
 interface TableItem {
     id: number;
@@ -33,7 +33,7 @@ const OwnerTables = () => {
     const [openEdit, setOpenEdit] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-    
+
     // Data States for Actions
     const [newTableNumber, setNewTableNumber] = useState('');
     const [editingTable, setEditingTable] = useState<TableItem | null>(null);
@@ -122,30 +122,37 @@ const OwnerTables = () => {
             setActiveTableId(null);
         }
     };
-    
-const handleDownload = (tableNumber: string) => {
-    const canvas = document.getElementById(`qr-${tableNumber}`) as HTMLCanvasElement;
-    if (canvas) {
-        // Find the selected branch object to get its name
-        const currentBranch = branches.find((b: any) => b.id.toString() === selectedBranch);
-        
-        // Sanitize branch name for filename (replace spaces with underscores)
-        const branchPrefix = currentBranch 
-            ? currentBranch.branch_name.replace(/\s+/g, '_') 
-            : 'Lotus';
 
-        const pngUrl = canvas.toDataURL("image/png");
-        const downloadLink = document.createElement("a");
-        downloadLink.href = pngUrl;
-        
-        // Updated filename format: BranchName_QR_Table_Number.png
-        downloadLink.download = `${branchPrefix}_QR_Table_${tableNumber}.png`;
-        
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-    }
-};
+    const handleDownload = (tableNumber: string) => {
+        const canvas = document.getElementById(`qr-${tableNumber}`) as HTMLCanvasElement;
+        if (canvas) {
+            // Find the selected branch object to get its name
+            const currentBranch = branches.find((b: any) => b.id.toString() === selectedBranch);
+
+            // Sanitize branch name for filename (replace spaces with underscores)
+            const branchPrefix = currentBranch
+                ? currentBranch.branch_name.replace(/\s+/g, '_')
+                : 'Lotus';
+
+            const pngUrl = canvas.toDataURL("image/png");
+            const downloadLink = document.createElement("a");
+            downloadLink.href = pngUrl;
+
+            // Updated filename format: BranchName_QR_Table_Number.png
+            downloadLink.download = `${branchPrefix}_QR_Table_${tableNumber}.png`;
+
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+    };
+
+    const handleCopyLink = (token: string) => {
+        const url = `${window.location.origin}/menu/scan/${token}`;
+        navigator.clipboard.writeText(url).then(() => {
+            toast({ title: "Copied!", description: "Table URL copied to clipboard." });
+        });
+    };
 
     return (
         <div className="space-y-6">
@@ -189,37 +196,57 @@ const handleDownload = (tableNumber: string) => {
                 {loading ? (
                     Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-64 rounded-xl" />)
                 ) : tables.map((table) => (
-                    <Card key={table.id} className="group overflow-hidden border-2 hover:border-primary transition-all">
-                        <CardHeader className="pb-2 border-b bg-muted/20 flex flex-row items-center justify-between space-y-0">
-                            <CardTitle className="text-2xl font-black">{table.table_number}</CardTitle>
-                            <div className="flex gap-1">
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
-                                    setEditingTable(table);
-                                    setTableInput(table.table_number);
-                                    setOpenEdit(true);
-                                }}>
-                                    <Pencil className="h-3 w-3" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => {
-                                    setActiveTableId(table.id);
-                                    setIsDeleteModalOpen(true);
-                                }}>
-                                    <Trash2 className="h-3 w-3" />
-                                </Button>
-                            </div>
+                    <Card key={table.id} className="group relative overflow-hidden border hover:border-primary/50 hover:shadow-lg transition-all duration-300">
+                        <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                            <Button variant="secondary" size="icon" className="h-8 w-8 shadow-sm" onClick={() => {
+                                setEditingTable(table);
+                                setTableInput(table.table_number);
+                                setOpenEdit(true);
+                            }}>
+                                <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="destructive" size="icon" className="h-8 w-8 shadow-sm" onClick={() => {
+                                setActiveTableId(table.id);
+                                setIsDeleteModalOpen(true);
+                            }}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
+
+                        <CardHeader className="pb-0 pt-6 text-center">
+                            <CardTitle className="text-xl font-bold text-foreground">{table.table_number}</CardTitle>
                         </CardHeader>
+
                         <CardContent className="py-6 flex flex-col items-center gap-4">
-                            <div className="p-3 bg-white rounded-xl shadow-inner">
-                                <QRCodeCanvas id={`qr-${table.table_number}`} value={`${window.location.origin}/menu/scan/${table.qr_code_token}`} size={140} level="H" />
+                            <div className="p-4 bg-white rounded-2xl shadow-sm border group-hover:scale-105 transition-transform duration-300">
+                                <QRCodeCanvas
+                                    id={`qr-${table.table_number}`}
+                                    value={`${window.location.origin}/menu/scan/${table.qr_code_token}`}
+                                    size={150}
+                                    level="H"
+                                />
                             </div>
-                            <div className="text-[9px] font-mono text-muted-foreground uppercase">TOKEN: {table.qr_code_token.substring(0, 14)}...</div>
+                            <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground bg-muted/50 px-3 py-1 rounded-full cursor-pointer hover:bg-muted transition-colors"
+                                onClick={() => handleCopyLink(table.qr_code_token)}
+                            >
+                                <ExternalLink className="h-3 w-3" />
+                                {`${window.location.origin}/.../${table.qr_code_token.substring(0, 6)}`}
+                            </div>
                         </CardContent>
-                        <CardFooter className="grid grid-cols-2 gap-2 bg-muted/5 p-2">
-                            <Button variant="outline" size="sm" className="text-xs" onClick={() => handleDownload(table.table_number)}><Download className="h-3 w-3 mr-1" /> Save</Button>
-                            <Button variant="outline" size="sm" className="text-xs" onClick={() => {
+
+                        <CardFooter className="grid grid-cols-3 gap-2 p-4 bg-muted/10 border-t">
+                            <Button variant="outline" size="sm" className="h-8 text-xs w-full" onClick={() => handleCopyLink(table.qr_code_token)}>
+                                <Copy className="h-3 w-3 mr-1.5" /> Copy
+                            </Button>
+                            <Button variant="outline" size="sm" className="h-8 text-xs w-full" onClick={() => handleDownload(table.table_number)}>
+                                <Download className="h-3 w-3 mr-1.5" /> Save
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-8 text-xs w-full text-muted-foreground hover:text-destructive" onClick={() => {
                                 setActiveTableId(table.id);
                                 setIsResetModalOpen(true);
-                            }}><RefreshCw className="h-3 w-3 mr-1" /> Reset</Button>
+                            }}>
+                                <RefreshCw className="h-3 w-3 mr-1.5" /> Reset
+                            </Button>
                         </CardFooter>
                     </Card>
                 ))}
@@ -240,7 +267,7 @@ const handleDownload = (tableNumber: string) => {
             </Dialog>
 
             {/* RESET TOKEN MODAL (Warning Style) */}
-            <ConfirmationModal 
+            <ConfirmationModal
                 isOpen={isResetModalOpen}
                 isLoading={actionLoading}
                 onClose={() => setIsResetModalOpen(false)}
@@ -251,9 +278,9 @@ const handleDownload = (tableNumber: string) => {
             />
 
             {/* DELETE TABLE MODAL (Destructive Style) */}
-            <DeleteConfirmModal 
-                open={isDeleteModalOpen}
-                onOpenChange={setIsDeleteModalOpen}
+            <DeleteConfirmModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={handleDeleteTable}
             />
         </div>

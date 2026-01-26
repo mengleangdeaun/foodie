@@ -13,9 +13,10 @@ const Login = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { login } = useAuth(); // 2. Extract login function
-    
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [remember, setRemember] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -36,31 +37,31 @@ const Login = () => {
         }
     };
 
- const submitForm = async (e: any) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    try {
-        const response = await api.post('/login', { email, password });
-        const { access_token, user } = response.data;
+    const submitForm = async (e: any) => {
+        e.preventDefault();
+        setLoading(true);
 
-        await login(access_token);
+        try {
+            const response = await api.post('/login', { email, password });
+            const { access_token, user } = response.data;
 
-        // Smart Redirection
-        if (user.role === 'owner') {
-            navigate('/admin/dashboard'); // Owners see a high-level overview
-        } else if (['manager', 'staff', 'chef'].includes(user.role)) {
-            // Staff are tied to a specific branch
-            navigate(user.role === 'chef' ? '/admin/kitchen' : '/admin/dashboard');
-        } else {
-            navigate('/super-admin/dashboard');
+            await login(access_token, remember);
+
+            // Smart Redirection
+            if (user.role === 'owner') {
+                navigate('/admin/dashboard'); // Owners see a high-level overview
+            } else if (['manager', 'staff', 'chef'].includes(user.role)) {
+                // Staff are tied to a specific branch
+                navigate(user.role === 'chef' ? '/admin/kitchen' : '/admin/dashboard');
+            } else {
+                navigate('/super-admin/dashboard');
+            }
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Invalid login');
+        } finally {
+            setLoading(false);
         }
-    } catch (err: any) {
-        setError(err.response?.data?.message || 'Invalid login');
-    } finally {
-        setLoading(false);
-    }
-};
+    };
 
     return (
         <div>
@@ -126,11 +127,11 @@ const Login = () => {
                             <form className="space-y-5 dark:text-white" onSubmit={submitForm}>
                                 <div>
                                     <label htmlFor="Email">Email</label>
-                                    <input 
-                                        id="Email" 
-                                        type="email" 
-                                        placeholder="Enter Email" 
-                                        className="form-input" 
+                                    <input
+                                        id="Email"
+                                        type="email"
+                                        placeholder="Enter Email"
+                                        className="form-input"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
@@ -138,20 +139,31 @@ const Login = () => {
                                 </div>
                                 <div>
                                     <label htmlFor="Password">Password</label>
-                                    <input 
-                                        id="Password" 
-                                        type="password" 
-                                        placeholder="Enter Password" 
-                                        className="form-input" 
+                                    <input
+                                        id="Password"
+                                        type="password"
+                                        placeholder="Enter Password"
+                                        className="form-input"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
                                     />
                                 </div>
-                                <button 
-                                    type="submit" 
+                                <div>
+                                    <label className="cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="form-checkbox"
+                                            checked={remember}
+                                            onChange={(e) => setRemember(e.target.checked)}
+                                        />
+                                        <span className="text-white-dark">Remember me</span>
+                                    </label>
+                                </div>
+                                <button
+                                    type="submit"
                                     disabled={loading}
-                                    className="btn btn-gradient !mt-6 w-full border-0 uppercase shadow-[0_10px_20px_-10px_rgba(67,97,238,0.44)]"
+                                    className="btn shadow-none !mt-6 w-full border uppercase"
                                 >
                                     {loading ? (
                                         <span className="flex items-center gap-2">

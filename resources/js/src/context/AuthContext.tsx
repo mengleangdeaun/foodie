@@ -17,12 +17,13 @@ interface User {
     branch_id: number | null;
     branch?: Branch; // Optional branch data
     permissions: Record<string, Record<string, boolean>>;
+    avatar?: string;
 }
 
 interface AuthContextType {
     user: User | null;
     loading: boolean;
-    login: (token: string) => Promise<void>;
+    login: (token: string, remember?: boolean) => Promise<void>;
     logout: () => void;
     setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }
@@ -38,7 +39,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, []);
 
     const checkAuth = async () => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         if (!token) {
             setLoading(false);
             return;
@@ -50,27 +51,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUser(res.data);
         } catch (error) {
             localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
         } finally {
             setLoading(false);
         }
     };
 
-const login = async (token: string) => {
-    localStorage.setItem('token', token);
-    setLoading(true); // Show loader while we fetch the fresh user data
-    try {
-        const res = await api.get('/user');
-        setUser(res.data);
-    } catch (error) {
-        console.error("Login verification failed", error);
-        localStorage.removeItem('token');
-    } finally {
-        setLoading(false);
-    }
-};
+    const login = async (token: string, remember: boolean = false) => {
+        if (remember) {
+            localStorage.setItem('token', token);
+        } else {
+            sessionStorage.setItem('token', token);
+        }
+
+        setLoading(true); // Show loader while we fetch the fresh user data
+        try {
+            const res = await api.get('/user');
+            setUser(res.data);
+        } catch (error) {
+            console.error("Login verification failed", error);
+            localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const logout = () => {
         localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
         setUser(null);
         window.location.href = '/login';
     };

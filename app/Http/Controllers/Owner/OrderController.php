@@ -58,6 +58,22 @@ if ($request->staff_id && $request->staff_id !== 'all') {
         });
     }
 
+    if ($request->has('search') && $request->search != '') {
+        $search = $request->search;
+
+        $query->where(function($q) use ($search) {
+              $q->where('order_code', 'like', '%' . $search . '%')
+                ->orWhere('order_type', 'like', '%' . $search . '%')
+                ->orWhereHas('restaurantTable', function($subQuery) use ($search) {
+                    $subQuery->where('table_number', 'like', $search);
+                });
+                $q->orWhereHas('creator', function($subQuery) use ($search) {
+                    $subQuery->where('name', 'like', '%'. $search .'%');
+                 });
+
+        });
+    }
+
     // Use pagination as requested
 $perPage = $request->get('per_page', 12);
     return response()->json([

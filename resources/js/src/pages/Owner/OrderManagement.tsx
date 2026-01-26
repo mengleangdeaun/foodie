@@ -7,12 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import OrderTypeBadge from "./components/OrderTypeBadge";
+import { useDebounce } from 'use-debounce'; 
 import {
     Clock, User as UserIcon, Loader2,
     ChevronLeft, ChevronRight, RefreshCw, Truck, Utensils,
     LayoutGrid, Package, Eye, Printer,
     Search, Filter as FilterIcon, Download,
-    ShoppingBag, MoreVertical, QrCode, Monitor
+    ShoppingBag, MoreVertical, QrCode, Monitor, Filter, X
 } from "lucide-react";
 import {
     Dialog,
@@ -66,6 +67,7 @@ const OrderManagement = () => {
     const [receiptSettings, setReceiptSettings] = useState<any>(null);
     const [branchInfo, setBranchInfo] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery] = useDebounce(searchQuery, 500); // 500ms delay
     const [selectedTab, setSelectedTab] = useState('all');
 
     // Pagination & Limit States
@@ -249,6 +251,8 @@ const OrderManagement = () => {
         handlePrintReceipt(order);
     };
 
+
+
     const fetchHistory = useCallback(async (pageNumber = 1) => {
         if (!dateTimeRange?.startDate || !dateTimeRange?.endDate) return;
 
@@ -259,7 +263,7 @@ const OrderManagement = () => {
                 per_page: perPage,
                 status: statusFilter !== 'all' ? statusFilter : undefined,
                 staff_id: staffFilter !== 'all' ? staffFilter : undefined,
-                search: searchQuery || undefined,
+                search: debouncedSearchQuery || undefined,
                 start_date: format(dateTimeRange.startDate, "yyyy-MM-dd"),
                 end_date: format(dateTimeRange.endDate, "yyyy-MM-dd"),
             };
@@ -297,7 +301,11 @@ const OrderManagement = () => {
         } finally {
             setLoading(false);
         }
-    }, [statusFilter, staffFilter, dateTimeRange, perPage, searchQuery]);
+    }, [statusFilter, staffFilter, dateTimeRange, perPage, debouncedSearchQuery]);
+
+    const handleClearSearch = () => {
+        setSearchQuery('');
+    };
 
     const fetchReceiptSettings = async () => {
         try {
@@ -326,13 +334,12 @@ const OrderManagement = () => {
     };
 
     useEffect(() => {
-        fetchHistory(1);
         fetchReceiptSettings();
     }, []);
 
     useEffect(() => {
         fetchHistory(1);
-    }, [statusFilter, staffFilter, dateTimeRange, perPage, searchQuery]);
+    }, [statusFilter, staffFilter, dateTimeRange, perPage, debouncedSearchQuery]);
 
     const handleUpdateStatus = async (id: number, newStatus: string) => {
         try {
@@ -350,6 +357,7 @@ const OrderManagement = () => {
             });
         }
     };
+
 
     const getOrderTypeIcon = (type: string) => {
         switch (type) {
@@ -412,75 +420,126 @@ const OrderManagement = () => {
                             )}
                             Refresh
                         </Button>
-                        <Button className="gap-2">
-                            <Download className="h-4 w-4" />
-                            Export
-                        </Button>
                     </div>
                 </div>
 
                 {/* Search and Filters */}
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-                    <div className="md:col-span-3">
+ <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+            <div className="md:col-span-2">
+                <div className="flex gap-2">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                            placeholder="Search by order ID, customer, or items..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 pr-10" // Add right padding for the clear icon
+                            onKeyDown={(e) => e.key === 'Enter' && fetchHistory(1)}
+                        />
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                onClick={handleClearSearch}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
+                    </div>
+<Button 
+    onClick={() => fetchHistory(1)}
+    className="whitespace-nowrap"
+    disabled={loading} // Disable while loading
+>
+    {loading ? (
+        <div className="flex items-center">
+            <div className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Searching...
+        </div>
+    ) : (
+        <>
+            <Search className="h-4 w-4 mr-2" />
+            Search
+        </>
+    )}
+</Button>
+                </div>
+            </div>
+            
+            <div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full">
+                        <FilterIcon className="h-4 w-4 mr-2" />
+                        <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        {Object.values(ORDER_STATUS).map(status => (
+                            <SelectItem key={status} value={status}>
+                                <div className="flex items-center gap-2">
+                                    <div className={`h-2 w-2 rounded-full ${STATUS_CONFIG[status]?.dot || 'bg-slate-400'}`} />
+                                    {STATUS_CONFIG[status]?.label || status.charAt(0).toUpperCase() + status.slice(1)}
+                                </div>
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+        </div>
+    
+
+            <Card className="border shadow-sm mb-6">
+                <CardContent className="p-6">
+                    <div className="space-y-4">
                         <DateTimeRangePicker
                             value={dateTimeRange}
                             onChange={setDateTimeRange}
-                            label="Date Range"
-                            className="w-full"
+                            label="Select Date & Time Range"
+                            required
+                            className="w-full "
+                            
                         />
-                    </div>
-                    <div className="md:col-span-2">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input
-                                placeholder="Search by order ID, customer, or items..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10"
-                                onKeyDown={(e) => e.key === 'Enter' && fetchHistory(1)}
-                            />
+                        
+                        <div className="flex items-center justify-between pt-4 border-t">
+                            <div className="text-sm text-muted-foreground">
+                                {dateTimeRange?.useTimeRange ? (
+                                    <span className="flex items-center gap-2">
+                                        <Eye className="h-4 w-4" />
+                                        Time filter is active
+                                    </span>
+                                ) : (
+                                    <span className="flex items-center gap-2">
+                                        <Clock className="h-4 w-4" />
+                                        Using full day ranges (00:00 - 23:59)
+                                    </span>
+                                )}
+                            </div>
+                        
                         </div>
                     </div>
-                    <div>
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-full">
-                                <FilterIcon className="h-4 w-4 mr-2" />
-                                <SelectValue placeholder="Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Statuses</SelectItem>
-                                {Object.values(ORDER_STATUS).map(status => (
-                                    <SelectItem key={status} value={status}>
-                                        <div className="flex items-center gap-2">
-                                            <div className={`h-2 w-2 rounded-full ${STATUS_CONFIG[status]?.color || 'bg-slate-400'}`} />
-                                            {status.charAt(0).toUpperCase() + status.slice(1)}
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
+                </CardContent>
+            </Card>
 
                 {/* Status Tabs */}
-                <Tabs value={selectedTab} onValueChange={setSelectedTab} className="mb-6">
-                    <TabsList className="flex w-full md:grid md:grid-cols-8 gap-1 md:gap-2 pb-2">
-                        <TabsTrigger value="all" className="flex gap-2 min-w-[120px] md:min-w-0">
-                            <LayoutGrid className="h-4 w-4" />
-                            All Orders
-                        </TabsTrigger>
-                        {Object.entries(STATUS_CONFIG).map(([status, config]) => (
-                            <TabsTrigger 
-                                key={status} 
-                                value={status} 
-                                className="flex gap-2 min-w-[120px] md:min-w-0 whitespace-nowrap"
-                            >
-                                <div className={`h-2 w-2 rounded-full ${config.color}`} />
-                                {config.label}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-                </Tabs>
+<Tabs value={selectedTab} onValueChange={setSelectedTab} className="mb-6">
+    <TabsList className="flex w-full md:grid md:grid-cols-8 gap-1 md:gap-2 pb-2">
+        <TabsTrigger value="all" className="flex gap-2 min-w-[120px] md:min-w-0">
+            <LayoutGrid className="h-4 w-4" />
+            All Orders
+        </TabsTrigger>
+        {Object.entries(STATUS_CONFIG).map(([status, config]) => (
+            <TabsTrigger 
+                key={status} 
+                value={status} 
+                className="flex gap-2 min-w-[120px] md:min-w-0 whitespace-nowrap"
+            >
+                {/* Change config.color to config.dot */}
+                <div className={`h-2 w-2 rounded-full ${config.dot}`} />
+                {config.label}
+            </TabsTrigger>
+        ))}
+    </TabsList>
+</Tabs>
             </div>
 
             {/* Orders Table */}
@@ -499,7 +558,7 @@ const OrderManagement = () => {
                                 setCurrentPage(1);
                                 fetchHistory(1);
                             }}>
-                                <SelectTrigger className="w-28">
+                                <SelectTrigger className="w-36">
                                     <SelectValue placeholder="Per page" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -658,7 +717,7 @@ const OrderManagement = () => {
                                                                         order.status === status && "bg-slate-100 dark:bg-slate-800"
                                                                     )}
                                                                 >
-                                                                    <div className={`h-2 w-2 rounded-full mr-2 ${config.color}`} />
+                                                                    <div className={`h-2 w-2 rounded-full mr-2 ${config.dot}`} />
                                                                     {config.label}
                                                                 </DropdownMenuItem>
                                                             ))}

@@ -5,6 +5,8 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 const Index = lazy(() => import('../pages/Index'));
 const Login = lazy(() => import('../pages/Auth/login'));
 const Unauthorized = lazy(() => import('../pages/Auth/Unauthorized'));
+const ForgotPassword = lazy(() => import('../pages/Auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('../pages/Auth/ResetPassword'));
 const CustomerMenu = lazy(() => import('../pages/Customer/CustomerMenu2'));
 
 // Super Admin
@@ -26,9 +28,12 @@ const KitchenDisplay = lazy(() => import('../pages/Staff/KitchenDisplay'));
 const KitchenHistory = lazy(() => import('../pages/Staff/KitchenHistory'));
 const KitchenReports = lazy(() => import('../pages/Staff/KitchenReports'));
 
+// User
+const Profile = lazy(() => import('../pages/Users/Profile'));
+
 // Inventory & Menu
 const BranchInventory = lazy(() => import('../pages/Owner/BranchInventory'));
-const BranchProPriceSize =  lazy(() => import('../pages/Owner/BranchProductSizes'));
+const BranchProPriceSize = lazy(() => import('../pages/Owner/BranchProductSizes'));
 const ProductModifier = lazy(() => import('../pages/Owner/ProductModifier'));
 const ProductAttribute = lazy(() => import('../pages/Owner/AttributeManager'));
 const RemarkManagement = lazy(() => import('../pages/Owner/RemarkManagement'));
@@ -38,6 +43,9 @@ const OwnerTables = lazy(() => import('../pages/Owner/Tables'));
 
 const routes = [
     { path: '/login', element: <Login />, layout: 'blank' },
+    { path: '/auth/forgot-password', element: <ForgotPassword />, layout: 'blank' },
+    // Route for reset password with token (handled by params)
+    { path: '/reset-password', element: <ResetPassword />, layout: 'blank' },
     { path: '/menu/scan/:token', element: <CustomerMenu />, layout: 'blank' },
     { path: '/admin/unauthorized', element: <Unauthorized />, layout: 'blank' },
 
@@ -62,21 +70,21 @@ const routes = [
         element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'read' }}><LiveOrder /></ProtectedRoute>,
         layout: 'default',
     },
-{
-    path: '/admin/kitchen',
-    element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'read' }}><KitchenDisplay /></ProtectedRoute>,
-    layout: 'kitchen', // Change this to trigger the new layout
-},
-{
-    path: '/admin/kitchen/history',
-    element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'read' }}><KitchenHistory /></ProtectedRoute>,
-    layout: 'kitchen', 
-},
-{
-    path: '/admin/kitchen/reports/shift',
-    element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'read' }}><KitchenReports /></ProtectedRoute>,
-    layout: 'kitchen', 
-},
+    {
+        path: '/admin/kitchen',
+        element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'read' }}><KitchenDisplay /></ProtectedRoute>,
+        layout: 'kitchen', // Change this to trigger the new layout
+    },
+    {
+        path: '/admin/kitchen/history',
+        element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'read' }}><KitchenHistory /></ProtectedRoute>,
+        layout: 'kitchen',
+    },
+    {
+        path: '/admin/kitchen/reports/shift',
+        element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'read' }}><KitchenReports /></ProtectedRoute>,
+        layout: 'kitchen',
+    },
     // --- Management (Owner Only) ---
     { path: '/admin/overview', element: <ProtectedRoute><OwnnerBranchOverview /></ProtectedRoute>, layout: 'default' },
     { path: '/admin/dashboard', element: <ProtectedRoute><OwnerDashboard /></ProtectedRoute>, layout: 'default' },
@@ -84,6 +92,9 @@ const routes = [
     { path: '/admin/staff', element: <ProtectedRoute><StaffManagement /></ProtectedRoute>, layout: 'default' },
     { path: '/admin/delivery-partners', element: <ProtectedRoute><DeliveryPartnerManagement /></ProtectedRoute>, layout: 'default' },
     { path: '/admin/settings/receipt', element: <ProtectedRoute><ReceiptSettings /></ProtectedRoute>, layout: 'default' },
+
+    // --- User Profile ---
+    { path: '/users/profile', element: <ProtectedRoute><Profile /></ProtectedRoute>, layout: 'default' },
 
     // --- Menu & Inventory (Granular) ---
     {
