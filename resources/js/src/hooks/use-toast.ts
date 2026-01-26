@@ -6,6 +6,7 @@ interface ToastProps {
   title?: string
   description?: string
   variant?: "default" | "destructive"
+  duration?: number
   // add other old shadcn props if you use them
 }
 

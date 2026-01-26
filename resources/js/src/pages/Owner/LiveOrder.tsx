@@ -5,9 +5,9 @@ import api from '@/util/api';
 import { parseItemRemark } from '@/util/remark-util';
 import { getOrderDisplayLabel } from '@/util/order-format';
 import { useAuth } from '@/context/AuthContext';
-import  OrderTypeBadge from "./components/OrderTypeBadge"; 
-import { 
-    Search, Loader2, Timer, ArrowUpRight, AlertCircle, 
+import OrderTypeBadge from "./components/OrderTypeBadge";
+import {
+    Search, Loader2, Timer, ArrowUpRight, AlertCircle,
     Printer, XCircle, CheckCircle, ChefHat, Calendar as CalendarIcon,
     ArrowRightCircle, Settings, RefreshCw, Bell, BellOff,
     Filter, Download, MoreVertical, Clock, Users, DollarSign,
@@ -26,7 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { 
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -34,7 +34,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuCheckboxItem
 } from "@/components/ui/dropdown-menu";
-import { 
+import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
@@ -63,8 +63,8 @@ export type OrderStatus = typeof ORDER_STATUS[keyof typeof ORDER_STATUS];
 // Get all status values as an array
 const ALL_STATUS_VALUES = Object.values(ORDER_STATUS);
 
-export const STATUS_CONFIG: Record<OrderStatus, { 
-    color: string; 
+export const STATUS_CONFIG: Record<OrderStatus, {
+    color: string;
     label: string;
     icon: React.ReactNode;
     bgColor: string;
@@ -72,8 +72,8 @@ export const STATUS_CONFIG: Record<OrderStatus, {
     actionColor: string;
     actionHoverColor: string;
 }> = {
-    [ORDER_STATUS.PENDING]: { 
-        color: 'bg-amber-500', 
+    [ORDER_STATUS.PENDING]: {
+        color: 'bg-amber-500',
         label: 'Pending',
         icon: <Clock className="h-3 w-3" />,
         bgColor: 'bg-amber-50 dark:bg-amber-950/20',
@@ -81,8 +81,8 @@ export const STATUS_CONFIG: Record<OrderStatus, {
         actionColor: 'bg-amber-600 hover:bg-amber-700',
         actionHoverColor: 'hover:bg-amber-700'
     },
-    [ORDER_STATUS.CONFIRMED]: { 
-        color: 'bg-blue-500', 
+    [ORDER_STATUS.CONFIRMED]: {
+        color: 'bg-blue-500',
         label: 'Confirmed',
         icon: <CheckCircle className="h-3 w-3" />,
         bgColor: 'bg-blue-50 dark:bg-blue-950/20',
@@ -90,8 +90,8 @@ export const STATUS_CONFIG: Record<OrderStatus, {
         actionColor: 'bg-blue-600 hover:bg-blue-700',
         actionHoverColor: 'hover:bg-blue-700'
     },
-    [ORDER_STATUS.COOKING]: { 
-        color: 'bg-orange-500', 
+    [ORDER_STATUS.COOKING]: {
+        color: 'bg-orange-500',
         label: 'Cooking',
         icon: <ChefHat className="h-3 w-3" />,
         bgColor: 'bg-orange-50 dark:bg-orange-950/20',
@@ -99,8 +99,8 @@ export const STATUS_CONFIG: Record<OrderStatus, {
         actionColor: 'bg-orange-600 hover:bg-orange-700',
         actionHoverColor: 'hover:bg-orange-700'
     },
-    [ORDER_STATUS.READY]: { 
-        color: 'bg-green-500', 
+    [ORDER_STATUS.READY]: {
+        color: 'bg-green-500',
         label: 'Ready',
         icon: <Package className="h-3 w-3" />,
         bgColor: 'bg-green-50 dark:bg-green-950/20',
@@ -108,8 +108,8 @@ export const STATUS_CONFIG: Record<OrderStatus, {
         actionColor: 'bg-green-600 hover:bg-green-700',
         actionHoverColor: 'hover:bg-green-700'
     },
-    [ORDER_STATUS.IN_SERVICE]: { 
-        color: 'bg-purple-600', 
+    [ORDER_STATUS.IN_SERVICE]: {
+        color: 'bg-purple-600',
         label: 'In Service',
         icon: <Utensils className="h-3 w-3" />,
         bgColor: 'bg-purple-50 dark:bg-purple-950/20',
@@ -117,8 +117,8 @@ export const STATUS_CONFIG: Record<OrderStatus, {
         actionColor: 'bg-purple-600 hover:bg-purple-700',
         actionHoverColor: 'hover:bg-purple-700'
     },
-    [ORDER_STATUS.PAID]: { 
-        color: 'bg-slate-600', 
+    [ORDER_STATUS.PAID]: {
+        color: 'bg-slate-600',
         label: 'Paid',
         icon: <DollarSign className="h-3 w-3" />,
         bgColor: 'bg-slate-50 dark:bg-slate-950/20',
@@ -126,8 +126,8 @@ export const STATUS_CONFIG: Record<OrderStatus, {
         actionColor: 'bg-slate-600 hover:bg-slate-700',
         actionHoverColor: 'hover:bg-slate-700'
     },
-    [ORDER_STATUS.CANCELLED]: { 
-        color: 'bg-red-600', 
+    [ORDER_STATUS.CANCELLED]: {
+        color: 'bg-red-600',
         label: 'Cancelled',
         icon: <XCircle className="h-3 w-3" />,
         bgColor: 'bg-red-50 dark:bg-red-950/20',
@@ -285,9 +285,9 @@ const StatusMultiSelect: React.FC<{
                             </Button>
                         </div>
                     </div>
-                    
+
                     <Separator />
-                    
+
                     <ScrollArea className="h-60">
                         <div className="space-y-2 pr-2">
                             {ALL_STATUS_VALUES.map((status) => {
@@ -302,7 +302,7 @@ const StatusMultiSelect: React.FC<{
                                         )}
                                         onClick={() => toggleStatus(status)}
                                     >
-                                        <Checkbox 
+                                        <Checkbox
                                             checked={isSelected}
                                             onCheckedChange={() => toggleStatus(status)}
                                         />
@@ -325,7 +325,7 @@ const StatusMultiSelect: React.FC<{
                                     {selectedStatuses.map(status => {
                                         const config = STATUS_CONFIG[status];
                                         return (
-                                            <Badge 
+                                            <Badge
                                                 key={status}
                                                 variant="secondary"
                                                 className="text-xs flex items-center gap-1"
@@ -360,9 +360,9 @@ const AdminLiveDashboard = () => {
     const [selectedStatuses, setSelectedStatuses] = useState<OrderStatus[]>([]);
     const [date, setDate] = useState<Date>(new Date());
     const [notificationsMuted, setNotificationsMuted] = useState(false);
-    const [cancelModal, setCancelModal] = useState<{ open: boolean; order: Order | null }>({ 
-        open: false, 
-        order: null 
+    const [cancelModal, setCancelModal] = useState<{ open: boolean; order: Order | null }>({
+        open: false,
+        order: null
     });
     const [cancelNote, setCancelNote] = useState('');
 
@@ -373,8 +373,8 @@ const AdminLiveDashboard = () => {
         const cooking = orders.filter(o => o.status === ORDER_STATUS.COOKING).length;
         const ready = orders.filter(o => o.status === ORDER_STATUS.READY).length;
         const todayOrders = orders.filter(o => isToday(new Date(o.created_at)));
-        
-        const avgWaitTime = orders.length > 0 
+
+        const avgWaitTime = orders.length > 0
             ? Math.round(orders.reduce((acc, order) => {
                 const waitTime = differenceInMinutes(new Date(), new Date(order.created_at));
                 return acc + waitTime;
@@ -415,9 +415,9 @@ const AdminLiveDashboard = () => {
         contentRef: printRef,
         onAfterPrint: () => {
             setSelectedOrder(null);
-            toast({ 
-                title: "Print Successful", 
-                description: "Receipt has been sent to printer." 
+            toast({
+                title: "Print Successful",
+                description: "Receipt has been sent to printer."
             });
         },
         onPrintError: () => {
@@ -431,10 +431,10 @@ const AdminLiveDashboard = () => {
 
     const triggerPrint = useCallback((order: Order) => {
         if (!receiptSettings) {
-            toast({ 
-                variant: "destructive", 
-                title: "Print Failed", 
-                description: "Receipt settings not loaded. Please refresh." 
+            toast({
+                variant: "destructive",
+                title: "Print Failed",
+                description: "Receipt settings not loaded. Please refresh."
             });
             return;
         }
@@ -450,7 +450,7 @@ const AdminLiveDashboard = () => {
         try {
             const formattedDate = format(date, 'yyyy-MM-dd');
             const res = await api.get(`/admin/orders/live?date=${formattedDate}`);
-            
+
             setOrders(Array.isArray(res.data.orders) ? res.data.orders : []);
         } catch (error) {
             toast({
@@ -459,33 +459,37 @@ const AdminLiveDashboard = () => {
                 description: "Failed to load orders. Please try again."
             });
             setOrders([]);
-        } finally { 
+        } finally {
             setRefreshing(false);
             setLoading(false);
         }
     }, [date, toast]);
 
-    // Initial fetch and real-time setup
+
+
     useEffect(() => {
         fetchLiveOrders();
-        
+
         if (window.Echo && user?.branch_id) {
             const channel = `branch.${user.branch_id}`;
-            
+
             window.Echo.channel(channel)
                 .listen('.order.created', (data: { order: Order }) => {
                     const orderDate = format(new Date(data.order.created_at), 'yyyy-MM-dd');
                     const selectedDate = format(date, 'yyyy-MM-dd');
 
                     if (orderDate === selectedDate) {
-                        setOrders(prev => [data.order, ...prev]);
-                        
+                        setOrders(prev => {
+                            if (prev.some(o => o.id === data.order.id)) return prev;
+                            return [data.order, ...prev];
+                        });
+
                         if (!notificationsMuted) {
                             const audio = new Audio('/assets/sounds/notification.mp3');
                             audio.volume = 0.3;
-                            audio.play().catch(() => {});
+                            audio.play().catch(() => { });
                         }
-                        
+
                         toast({
                             title: "New Order Received",
                             description: `Order #${data.order.id} - ${getOrderDisplayLabel(data.order)}`,
@@ -493,35 +497,33 @@ const AdminLiveDashboard = () => {
                         });
                     }
                 })
-            .listen('.order.updated', (data: { order: Order }) => {
-                const updatedLabel = getOrderDisplayLabel(data.order);
-
-                setOrders(prev =>
-                    prev.map(o =>
-                        getOrderDisplayLabel(o) === updatedLabel
-                            ? data.order
-                            : o
-                    )
-                );
-            });
+                .listen('.order.updated', (data: { order: Order }) => {
+                    setOrders(prev =>
+                        prev.map(o =>
+                            o.id === data.order.id
+                                ? data.order
+                                : o
+                        )
+                    );
+                });
             return () => window.Echo.leave(channel);
         }
-    }, [user?.branch_id, date, fetchLiveOrders, notificationsMuted, toast]);
+    }, [user?.branch_id, date, notificationsMuted, toast]);
 
     const handleUpdateStatus = useCallback(async (id: number, newStatus: OrderStatus, note?: string) => {
         setUpdatingId(id);
         try {
-            await api.patch(`/admin/orders/${id}/status`, { 
-                status: newStatus, 
-                note: note?.trim() || undefined 
+            await api.patch(`/admin/orders/${id}/status`, {
+                status: newStatus,
+                note: note?.trim() || undefined
             });
             setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
-            
+
             toast({
                 title: "Status Updated",
                 description: `Order is now ${STATUS_CONFIG[newStatus].label}`,
             });
-            
+
             if (newStatus === ORDER_STATUS.CANCELLED) {
                 setCancelModal({ open: false, order: null });
                 setCancelNote('');
@@ -532,23 +534,23 @@ const AdminLiveDashboard = () => {
                 title: "Update Failed",
                 description: error.response?.data?.message || "Failed to update order status"
             });
-        } finally { 
-            setUpdatingId(null); 
+        } finally {
+            setUpdatingId(null);
         }
     }, [toast]);
 
     const filteredOrders = useMemo(() => {
         return orders.filter(o => {
-            const matchesSearch = o.id.toString().includes(searchTerm) || 
-                                (o.restaurant_table?.table_number || '').includes(searchTerm) ||
-                                o.items.some(item => 
-                                    item.product?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-                                );
-            
+            const matchesSearch = o.id.toString().includes(searchTerm) ||
+                (o.restaurant_table?.table_number || '').includes(searchTerm) ||
+                o.items.some(item =>
+                    item.product?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+
             // Multi-select filter logic
-            const matchesStatus = selectedStatuses.length === 0 || 
-                                selectedStatuses.includes(o.status);
-            
+            const matchesStatus = selectedStatuses.length === 0 ||
+                selectedStatuses.includes(o.status);
+
             return matchesSearch && matchesStatus;
         });
     }, [orders, searchTerm, selectedStatuses]);
@@ -564,9 +566,9 @@ const AdminLiveDashboard = () => {
 
         const config = STATUS_CONFIG[nextStatus];
         const actionLabel = STATUS_ACTION_LABELS[order.status];
-        
+
         // Special case for confirmed -> cooking button
-        const buttonClass = order.status === ORDER_STATUS.CONFIRMED 
+        const buttonClass = order.status === ORDER_STATUS.CONFIRMED
             ? "bg-orange-600 hover:bg-orange-700"
             : config.actionColor;
 
@@ -709,8 +711,8 @@ const AdminLiveDashboard = () => {
                 </Card>
 
                 {/* Status Tabs (Quick Single-Select) */}
-                <Tabs 
-                    value={selectedStatuses.length === 1 ? selectedStatuses[0] : 'all'} 
+                <Tabs
+                    value={selectedStatuses.length === 1 ? selectedStatuses[0] : 'all'}
                     onValueChange={(value) => {
                         if (value === 'all') {
                             setSelectedStatuses([]);
@@ -749,17 +751,17 @@ const AdminLiveDashboard = () => {
                             {selectedStatuses.map(status => {
                                 const config = STATUS_CONFIG[status];
                                 return (
-                                    <Badge 
+                                    <Badge
                                         key={status}
                                         variant="secondary"
                                         className="flex items-center gap-1"
                                     >
                                         <div className={cn("h-2 w-2 rounded-full", config.color)} />
                                         {config.label}
-                                        <X 
-                                            className="h-3 w-3 ml-1 cursor-pointer" 
+                                        <X
+                                            className="h-3 w-3 ml-1 cursor-pointer"
                                             onClick={() => {
-                                                setSelectedStatuses(prev => 
+                                                setSelectedStatuses(prev =>
                                                     prev.filter(s => s !== status)
                                                 );
                                             }}
@@ -802,7 +804,7 @@ const AdminLiveDashboard = () => {
                             <ChefHat className="h-12 w-12 text-muted-foreground/50 mb-4" />
                             <h3 className="text-lg font-semibold mb-2">No orders found</h3>
                             <p className="text-sm text-muted-foreground text-center max-w-sm">
-                                {searchTerm || selectedStatuses.length > 0 
+                                {searchTerm || selectedStatuses.length > 0
                                     ? "No orders match your filter criteria."
                                     : `No orders for ${format(date, 'MMMM d, yyyy')}.`}
                             </p>
@@ -883,16 +885,16 @@ const AdminLiveDashboard = () => {
                                                                 <Printer className="h-4 w-4 mr-2" />
                                                                 Print Receipt
                                                             </DropdownMenuItem>
-                                                            {order.status !== ORDER_STATUS.CANCELLED && 
-                                                             order.status !== ORDER_STATUS.PAID && (
-                                                                <DropdownMenuItem 
-                                                                    className="text-destructive"
-                                                                    onClick={() => setCancelModal({ open: true, order })}
-                                                                >
-                                                                    <XCircle className="h-4 w-4 mr-2" />
-                                                                    Cancel Order
-                                                                </DropdownMenuItem>
-                                                            )}
+                                                            {order.status !== ORDER_STATUS.CANCELLED &&
+                                                                order.status !== ORDER_STATUS.PAID && (
+                                                                    <DropdownMenuItem
+                                                                        className="text-destructive"
+                                                                        onClick={() => setCancelModal({ open: true, order })}
+                                                                    >
+                                                                        <XCircle className="h-4 w-4 mr-2" />
+                                                                        Cancel Order
+                                                                    </DropdownMenuItem>
+                                                                )}
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </div>
@@ -928,13 +930,13 @@ const AdminLiveDashboard = () => {
                                                                         <div className="mb-2">
                                                                             <div className="flex flex-wrap items-center gap-1 mb-1">
                                                                                 {presets.map((preset, idx) => {
-                                                                                    const [key, value] = preset.includes('=') 
-                                                                                        ? preset.split('=') 
+                                                                                    const [key, value] = preset.includes('=')
+                                                                                        ? preset.split('=')
                                                                                         : [preset, ''];
-                                                                                    
+
                                                                                     return (
-                                                                                        <Badge 
-                                                                                            key={idx} 
+                                                                                        <Badge
+                                                                                            key={idx}
                                                                                             variant="outline"
                                                                                             className="text-xs font-normal bg-slate-50 dark:bg-slate-900"
                                                                                         >
@@ -957,9 +959,9 @@ const AdminLiveDashboard = () => {
                                                                     {adds.length > 0 && (
                                                                         <div className="flex flex-wrap gap-1 mb-2">
                                                                             {adds.map((add, idx) => (
-                                                                                <Badge 
-                                                                                    key={idx} 
-                                                                                    variant="secondary" 
+                                                                                <Badge
+                                                                                    key={idx}
+                                                                                    variant="secondary"
                                                                                     className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200"
                                                                                 >
                                                                                     + {add}
@@ -1012,7 +1014,7 @@ const AdminLiveDashboard = () => {
                                 This action cannot be undone. The order will be marked as cancelled.
                             </DialogDescription>
                         </DialogHeader>
-                        
+
                         {user?.branch?.requires_cancel_note === 1 && (
                             <div className="space-y-3">
                                 <label className="text-sm font-medium">Cancellation Reason *</label>

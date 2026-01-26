@@ -27,6 +27,7 @@ class NewOrderRegistered implements ShouldBroadcastNow
     public function __construct(Order $order)
     {
         $this->order = $order->load(['items.product', 'restaurantTable', 'user']);
+        $this->order->append('daily_sequence');
     }
 
     /**

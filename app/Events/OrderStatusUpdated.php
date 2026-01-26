@@ -23,6 +23,7 @@ class OrderStatusUpdated implements ShouldBroadcast
         $this->order = $order->load(['items.product', 'restaurantTable', 'deliveryPartner']);
         $this->orderId = $order->id;
         $this->status = $order->status;
+        $this->order->append('daily_sequence');
     }
 
     /**
@@ -35,7 +36,7 @@ class OrderStatusUpdated implements ShouldBroadcast
         return [
             // Channel for the specific Customer
             new Channel('order.' . $this->orderId),
-            
+
             // Channel for the Admin Live Dashboard
             new Channel('branch.' . $this->order->branch_id),
         ];
