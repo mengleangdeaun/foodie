@@ -46,6 +46,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import OrderCancellationModal from '@/components/orders/OrderCancellationModal';
 
 // Status Mapping Constants
 export const ORDER_STATUS = {
@@ -181,6 +182,15 @@ interface Order {
         name: string;
     };
     order_type?: 'dine-in' | 'takeaway' | 'delivery';
+    histories?: {
+        from_status: OrderStatus;
+        to_status: OrderStatus;
+        note: string;
+        created_at: string;
+        user?: {
+            name: string;
+        }
+    }[];
 }
 
 interface StatsCardProps {
@@ -517,6 +527,10 @@ const AdminLiveDashboard = () => {
                 status: newStatus,
                 note: note?.trim() || undefined
             });
+
+            // Find current order data before update
+            const currentOrder = orders.find(o => o.id === id);
+
             setOrders(prev => prev.map(o => o.id === id ? { ...o, status: newStatus } : o));
 
             toast({
@@ -528,6 +542,13 @@ const AdminLiveDashboard = () => {
                 setCancelModal({ open: false, order: null });
                 setCancelNote('');
             }
+
+            // Auto-print receipt when marking as PAID
+            if (newStatus === ORDER_STATUS.PAID && currentOrder) {
+                // Pass order with new status to printer
+                triggerPrint({ ...currentOrder, status: newStatus });
+            }
+
         } catch (error: any) {
             toast({
                 variant: "destructive",
@@ -537,7 +558,9 @@ const AdminLiveDashboard = () => {
         } finally {
             setUpdatingId(null);
         }
-    }, [toast]);
+    }, [orders, toast, triggerPrint]);
+
+
 
     const filteredOrders = useMemo(() => {
         return orders.filter(o => {
@@ -855,17 +878,19 @@ const AdminLiveDashboard = () => {
                                                             )}>
                                                                 {config.label}
                                                             </Badge>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                                        <Timer size={12} />
-                                                                        {waitTime}m
-                                                                    </div>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>
-                                                                    Order placed at {format(new Date(order.created_at), 'HH:mm')}
-                                                                </TooltipContent>
-                                                            </Tooltip>
+                                                            {![ORDER_STATUS.PAID, ORDER_STATUS.CANCELLED].includes(order.status) && (
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                                            <Timer size={12} />
+                                                                            {waitTime}m
+                                                                        </div>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        Order placed at {format(new Date(order.created_at), 'HH:mm')}
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            )}
                                                         </div>
                                                         <CardTitle className="text-lg font-bold">
                                                             {getOrderDisplayLabel(order)}
@@ -981,6 +1006,29 @@ const AdminLiveDashboard = () => {
                                                     </div>
                                                 </ScrollArea>
 
+                                                {/* Cancellation Note */}
+                                                {order.status === ORDER_STATUS.CANCELLED && (
+                                                    <div className="mt-2">
+                                                        {(() => {
+                                                            const cancelHistory = order.histories?.find(h => h.to_status === ORDER_STATUS.CANCELLED);
+                                                            return cancelHistory ? (
+                                                                <div className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md">
+                                                                    <div className="flex items-center gap-2 mb-1 text-red-800 dark:text-red-300 font-semibold text-sm">
+                                                                        <AlertCircle className="h-4 w-4" />
+                                                                        Cancelled by {cancelHistory.user?.name || 'System'}
+                                                                    </div>
+                                                                    <p className="text-sm text-red-700 dark:text-red-400">
+                                                                        {cancelHistory.note || 'No reason provided'}
+                                                                    </p>
+                                                                    <p className="text-xs text-red-600 dark:text-red-500 mt-1">
+                                                                        {format(new Date(cancelHistory.created_at), 'MMM d, h:mm a')}
+                                                                    </p>
+                                                                </div>
+                                                            ) : null;
+                                                        })()}
+                                                    </div>
+                                                )}
+
                                                 <Separator />
 
                                                 {/* Actions */}
@@ -990,6 +1038,17 @@ const AdminLiveDashboard = () => {
                                                         <div className="text-xl font-bold">${order.total}</div>
                                                     </div>
                                                     <div className="flex gap-2">
+                                                        {order.status === ORDER_STATUS.PAID && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="hover:scale-[1.02] transition-all"
+                                                                onClick={() => triggerPrint(order)}
+                                                            >
+                                                                <Printer className="h-4 w-4 mr-2" />
+                                                                Print Receipt
+                                                            </Button>
+                                                        )}
                                                         {nextAction}
                                                     </div>
                                                 </div>
@@ -1003,58 +1062,21 @@ const AdminLiveDashboard = () => {
                 )}
 
                 {/* Cancel Order Modal */}
-                <Dialog open={cancelModal.open} onOpenChange={(open) => !open && setCancelModal({ open: false, order: null })}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2 text-destructive">
-                                <AlertCircle className="h-5 w-5" />
-                                Cancel Order #{cancelModal.order?.id}
-                            </DialogTitle>
-                            <DialogDescription>
-                                This action cannot be undone. The order will be marked as cancelled.
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        {user?.branch?.requires_cancel_note === 1 && (
-                            <div className="space-y-3">
-                                <label className="text-sm font-medium">Cancellation Reason *</label>
-                                <Textarea
-                                    placeholder="Please provide a reason for cancellation..."
-                                    className="min-h-[100px]"
-                                    value={cancelNote}
-                                    onChange={(e) => setCancelNote(e.target.value)}
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    Required by branch policy
-                                </p>
-                            </div>
-                        )}
-
-                        <DialogFooter>
-                            <Button
-                                variant="outline"
-                                onClick={() => setCancelModal({ open: false, order: null })}
-                            >
-                                Keep Order
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={() => {
-                                    if (cancelModal.order) {
-                                        handleUpdateStatus(
-                                            cancelModal.order.id,
-                                            ORDER_STATUS.CANCELLED,
-                                            cancelNote
-                                        );
-                                    }
-                                }}
-                                disabled={user?.branch?.requires_cancel_note === 1 && !cancelNote.trim()}
-                            >
-                                Confirm Cancellation
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                <OrderCancellationModal
+                    open={cancelModal.open}
+                    onOpenChange={(open) => !open && setCancelModal({ open: false, order: null })}
+                    orderId={cancelModal.order?.id || null}
+                    requiresNote={user?.branch?.requires_cancel_note === 1}
+                    onConfirm={(note) => {
+                        if (cancelModal.order) {
+                            handleUpdateStatus(
+                                cancelModal.order.id,
+                                ORDER_STATUS.CANCELLED,
+                                note
+                            );
+                        }
+                    }}
+                />
 
                 {/* Hidden Print Component */}
                 <div className="hidden">
@@ -1063,6 +1085,7 @@ const AdminLiveDashboard = () => {
                             <ThermalReceipt
                                 order={selectedOrder}
                                 settings={receiptSettings}
+                                branch={user?.branch}
                             />
                         </div>
                     )}

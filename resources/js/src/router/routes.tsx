@@ -2,12 +2,13 @@ import { lazy } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 // Auth & Public
+const Error = lazy(() => import('../components/Error'));
 const Index = lazy(() => import('../pages/Index'));
 const Login = lazy(() => import('../pages/Auth/login'));
 const Unauthorized = lazy(() => import('../pages/Auth/Unauthorized'));
 const ForgotPassword = lazy(() => import('../pages/Auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('../pages/Auth/ResetPassword'));
-const CustomerMenu = lazy(() => import('../pages/Customer/CustomerMenu2'));
+const CustomerMenu = lazy(() => import('../pages/Customer/CustomerMenu'));
 
 // Super Admin
 const SuperAdminDashboard = lazy(() => import('../pages/SuperAdmin/Dashboard'));
@@ -136,6 +137,11 @@ const routes = [
         path: '/admin/tables',
         element: <ProtectedRoute requiredPermission={{ module: 'tables', action: 'read' }}><OwnerTables /></ProtectedRoute>,
         layout: 'default',
+    },
+    {
+        path: '*',
+        element: <Error />,
+        layout: 'blank',
     },
 
     { path: '/', element: <Index />, layout: 'default' },

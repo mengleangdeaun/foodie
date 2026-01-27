@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
 import api from '@/util/api';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import OrderTypeBadge from "./components/OrderTypeBadge";
-import { useDebounce } from 'use-debounce'; 
+import { useDebounce } from 'use-debounce';
 import {
     Clock, User as UserIcon, Loader2,
     ChevronLeft, ChevronRight, RefreshCw, Truck, Utensils,
@@ -51,7 +52,8 @@ import DateTimeRangePicker, { DateTimeRange } from "@/components/ui/date-time-ra
 import { cn } from "@/lib/utils";
 import ThermalReceipt from '@/components/printing/ThermalReceipt';
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
+import { parseItemRemark } from '@/util/remark-util';
+import OrderCancellationModal from '@/components/orders/OrderCancellationModal';
 
 
 const OrderManagement = () => {
@@ -84,167 +86,47 @@ const OrderManagement = () => {
         useTimeRange: false,
     });
 
+    const [cancelModal, setCancelModal] = useState<{ open: boolean; order: any | null }>({
+        open: false,
+        order: null
+    });
+
     // Print functionality
-    const printReceiptRef = useRef<HTMLDivElement>(null);
+    const printRef = useRef<HTMLDivElement>(null);
     const [printing, setPrinting] = useState(false);
     const [orderToPrint, setOrderToPrint] = useState<any>(null);
-    const [printData, setPrintData] = useState<any>(null);
-    const [printIframe, setPrintIframe] = useState<HTMLIFrameElement | null>(null);
 
-    // Create a hidden iframe for printing
-    useEffect(() => {
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'absolute';
-        iframe.style.width = '0';
-        iframe.style.height = '0';
-        iframe.style.border = '0';
-        iframe.style.visibility = 'hidden';
-        document.body.appendChild(iframe);
-        setPrintIframe(iframe);
+    const handlePrint = useReactToPrint({
+        contentRef: printRef,
+        onAfterPrint: () => {
+            setPrinting(false);
+            setOrderToPrint(null);
+        },
+    });
 
-        return () => {
-            if (iframe && document.body.contains(iframe)) {
-                document.body.removeChild(iframe);
-            }
-        };
-    }, []);
+    const triggerPrint = useCallback((order: any) => {
+        setOrderToPrint(order);
+        setPrinting(true);
+        // Timeout to allow state to update and render ThermalReceipt
+        setTimeout(() => {
+            handlePrint();
+        }, 100);
+    }, [handlePrint]);
 
     // Handle print receipt
     const handlePrintReceipt = async (order: any) => {
-        try {
-            setPrinting(true);
-            setOrderToPrint(order);
-            
-            // Fetch receipt data
-            const response = await api.get(`/admin/orders/${order.id}/print-receipt`);
-            const receiptData = {
-                order: response.data.order,
-                settings: response.data.receipt_settings,
-                branch: response.data.branch
-            };
-            
-            // Store print data
-            setPrintData(receiptData);
-            
-            // Trigger print after a small delay to ensure state is updated
-            setTimeout(() => {
-                if (printReceiptRef.current && printIframe) {
-                    printDocument();
-                }
-            }, 100);
-            
-        } catch (error: any) {
-            console.error('Print error:', error);
-            toast({
-                variant: "destructive",
-                title: "Print Error",
-                description: error.response?.data?.message || "Failed to fetch receipt data"
-            });
-            setPrinting(false);
-            setOrderToPrint(null);
+        // Just trigger the print using the order data we already have
+        // Or if we need fresh data/settings (settings are already in state 'receiptSettings')
+        // The LiveOrder implementation uses global settings + order data.
+
+        // Ensure we have settings
+        if (!receiptSettings) {
+            await fetchReceiptSettings();
         }
+        triggerPrint(order);
     };
 
-    // Function to trigger print dialog
-    const printDocument = () => {
-        if (!printIframe || !printReceiptRef.current) return;
 
-        try {
-            // Get the receipt HTML
-            const receiptHtml = printReceiptRef.current.innerHTML;
-            
-            // Set up iframe content
-            printIframe.contentDocument?.open();
-            printIframe.contentDocument?.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Receipt - Order #${orderToPrint?.id}</title>
-                    <style>
-                        @page {
-                            size: ${printData?.settings?.paper_width || 80}mm auto;
-                            margin: 0;
-                        }
-                        body {
-                            margin: 0;
-                            padding: 0;
-                            font-family: ${printData?.settings?.font_family || 'monospace'};
-                            background: white;
-                        }
-                        .receipt-container {
-                            width: ${printData?.settings?.paper_width || 80}mm;
-                            max-width: ${printData?.settings?.paper_width || 80}mm;
-                            margin: 0 auto;
-                            padding: ${printData?.settings?.margin_size || 10}px;
-                            font-size: ${printData?.settings?.font_size_base || 12}px;
-                        }
-                        @media print {
-                            body * {
-                                visibility: hidden;
-                            }
-                            .receipt-container, .receipt-container * {
-                                visibility: visible;
-                            }
-                            .receipt-container {
-                                position: absolute;
-                                left: 0;
-                                top: 0;
-                            }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="receipt-container">
-                        ${receiptHtml}
-                    </div>
-                    <script>
-                        // Auto-print when loaded
-                        window.onload = function() {
-                            setTimeout(function() {
-                                window.print();
-                                setTimeout(function() {
-                                    window.parent.postMessage('printComplete', '*');
-                                }, 100);
-                            }, 200);
-                        };
-                        
-                        // Handle print dialog close
-                        window.onafterprint = function() {
-                            window.parent.postMessage('printComplete', '*');
-                        };
-                    </script>
-                </body>
-                </html>
-            `);
-            printIframe.contentDocument?.close();
-            
-            // Listen for print completion
-            const handlePrintComplete = (event: MessageEvent) => {
-                if (event.data === 'printComplete') {
-                    toast({
-                        title: "Receipt Printed",
-                        description: "Receipt has been sent to printer",
-                    });
-                    setPrinting(false);
-                    setOrderToPrint(null);
-                    setPrintData(null);
-                    window.removeEventListener('message', handlePrintComplete);
-                }
-            };
-            
-            window.addEventListener('message', handlePrintComplete);
-            
-        } catch (error) {
-            console.error('Print setup error:', error);
-            toast({
-                variant: "destructive",
-                title: "Print Error",
-                description: "Failed to prepare receipt for printing"
-            });
-            setPrinting(false);
-            setOrderToPrint(null);
-        }
-    };
 
     // Quick print from table
     const handleQuickPrint = (order: any) => {
@@ -274,7 +156,7 @@ const OrderManagement = () => {
             }
 
             const res = await api.get('/admin/orders/history', { params });
-            
+
             if (res.data?.success) {
                 const pagination = res.data.orders;
                 setOrders(pagination.data || []);
@@ -287,9 +169,9 @@ const OrderManagement = () => {
                 setLastPage(res.data?.orders?.last_page || 1);
                 setCurrentPage(res.data?.orders?.current_page || 1);
             }
-            
+
             setStaffList(res.data.staff_list || []);
-            
+
         } catch (error: any) {
             toast({
                 variant: "destructive",
@@ -341,13 +223,28 @@ const OrderManagement = () => {
         fetchHistory(1);
     }, [statusFilter, staffFilter, dateTimeRange, perPage, debouncedSearchQuery]);
 
-    const handleUpdateStatus = async (id: number, newStatus: string) => {
+    const handleUpdateStatus = async (id: number, newStatus: string, note?: string) => {
+        // If status is cancelled and we haven't opened the modal yet (note is undefined)
+        // and branch requires note, OR if we just want to confirm cancellation via modal always
+        if (newStatus === ORDER_STATUS.CANCELLED && !note) {
+            const order = orders.find(o => o.id === id);
+            setCancelModal({ open: true, order });
+            return;
+        }
+
         try {
-            await api.patch(`/admin/orders/${id}/status`, { status: newStatus });
+            await api.patch(`/admin/orders/${id}/status`, {
+                status: newStatus,
+                note: note // Pass the note if it exists
+            });
             toast({
                 title: "Status Updated",
                 description: `Order #${id} status changed to ${newStatus}`
             });
+
+            // Close modal if it was open
+            setCancelModal({ open: false, order: null });
+
             fetchHistory(currentPage);
         } catch (error: any) {
             toast({
@@ -382,7 +279,7 @@ const OrderManagement = () => {
     const getStatusClasses = (status: string): string => {
         const config = STATUS_CONFIG[status];
         if (!config) return '';
-        
+
         return `${config.bg} ${config.border} ${config.text} ${config.darkBg} ${config.darkBorder} ${config.darkText} border-2`;
     };
 
@@ -424,126 +321,126 @@ const OrderManagement = () => {
                 </div>
 
                 {/* Search and Filters */}
- <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-            <div className="md:col-span-2">
-                <div className="flex gap-2">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <Input
-                            placeholder="Search by order ID, customer, or items..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 pr-10" // Add right padding for the clear icon
-                            onKeyDown={(e) => e.key === 'Enter' && fetchHistory(1)}
-                        />
-                        {searchQuery && (
-                            <button
-                                type="button"
-                                onClick={handleClearSearch}
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
-                        )}
-                    </div>
-<Button 
-    onClick={() => fetchHistory(1)}
-    className="whitespace-nowrap"
-    disabled={loading} // Disable while loading
->
-    {loading ? (
-        <div className="flex items-center">
-            <div className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            Searching...
-        </div>
-    ) : (
-        <>
-            <Search className="h-4 w-4 mr-2" />
-            Search
-        </>
-    )}
-</Button>
-                </div>
-            </div>
-            
-            <div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full">
-                        <FilterIcon className="h-4 w-4 mr-2" />
-                        <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        {Object.values(ORDER_STATUS).map(status => (
-                            <SelectItem key={status} value={status}>
-                                <div className="flex items-center gap-2">
-                                    <div className={`h-2 w-2 rounded-full ${STATUS_CONFIG[status]?.dot || 'bg-slate-400'}`} />
-                                    {STATUS_CONFIG[status]?.label || status.charAt(0).toUpperCase() + status.slice(1)}
-                                </div>
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-        </div>
-    
-
-            <Card className="border shadow-sm mb-6">
-                <CardContent className="p-6">
-                    <div className="space-y-4">
-                        <DateTimeRangePicker
-                            value={dateTimeRange}
-                            onChange={setDateTimeRange}
-                            label="Select Date & Time Range"
-                            required
-                            className="w-full "
-                            
-                        />
-                        
-                        <div className="flex items-center justify-between pt-4 border-t">
-                            <div className="text-sm text-muted-foreground">
-                                {dateTimeRange?.useTimeRange ? (
-                                    <span className="flex items-center gap-2">
-                                        <Eye className="h-4 w-4" />
-                                        Time filter is active
-                                    </span>
-                                ) : (
-                                    <span className="flex items-center gap-2">
-                                        <Clock className="h-4 w-4" />
-                                        Using full day ranges (00:00 - 23:59)
-                                    </span>
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+                    <div className="md:col-span-2">
+                        <div className="flex gap-2">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Input
+                                    placeholder="Search by order ID, customer, or items..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-10 pr-10" // Add right padding for the clear icon
+                                    onKeyDown={(e) => e.key === 'Enter' && fetchHistory(1)}
+                                />
+                                {searchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={handleClearSearch}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
                                 )}
                             </div>
-                        
+                            <Button
+                                onClick={() => fetchHistory(1)}
+                                className="whitespace-nowrap"
+                                disabled={loading} // Disable while loading
+                            >
+                                {loading ? (
+                                    <div className="flex items-center">
+                                        <div className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        Searching...
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Search className="h-4 w-4 mr-2" />
+                                        Search
+                                    </>
+                                )}
+                            </Button>
                         </div>
                     </div>
-                </CardContent>
-            </Card>
+
+                    <div>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-full">
+                                <FilterIcon className="h-4 w-4 mr-2" />
+                                <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Statuses</SelectItem>
+                                {Object.values(ORDER_STATUS).map(status => (
+                                    <SelectItem key={status} value={status}>
+                                        <div className="flex items-center gap-2">
+                                            <div className={`h-2 w-2 rounded-full ${STATUS_CONFIG[status]?.dot || 'bg-slate-400'}`} />
+                                            {STATUS_CONFIG[status]?.label || status.charAt(0).toUpperCase() + status.slice(1)}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+
+
+                <Card className="border shadow-sm mb-6">
+                    <CardContent className="p-6">
+                        <div className="space-y-4">
+                            <DateTimeRangePicker
+                                value={dateTimeRange}
+                                onChange={setDateTimeRange}
+                                label="Select Date & Time Range"
+                                required
+                                className="w-full "
+
+                            />
+
+                            <div className="flex items-center justify-between pt-4 border-t">
+                                <div className="text-sm text-muted-foreground">
+                                    {dateTimeRange?.useTimeRange ? (
+                                        <span className="flex items-center gap-2">
+                                            <Eye className="h-4 w-4" />
+                                            Time filter is active
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center gap-2">
+                                            <Clock className="h-4 w-4" />
+                                            Using full day ranges (00:00 - 23:59)
+                                        </span>
+                                    )}
+                                </div>
+
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 {/* Status Tabs */}
-<Tabs value={selectedTab} onValueChange={setSelectedTab} className="mb-6">
-    <TabsList className="flex w-full md:grid md:grid-cols-8 gap-1 md:gap-2 pb-2">
-        <TabsTrigger value="all" className="flex gap-2 min-w-[120px] md:min-w-0">
-            <LayoutGrid className="h-4 w-4" />
-            All Orders
-        </TabsTrigger>
-        {Object.entries(STATUS_CONFIG).map(([status, config]) => (
-            <TabsTrigger 
-                key={status} 
-                value={status} 
-                className="flex gap-2 min-w-[120px] md:min-w-0 whitespace-nowrap"
-            >
-                {/* Change config.color to config.dot */}
-                <div className={`h-2 w-2 rounded-full ${config.dot}`} />
-                {config.label}
-            </TabsTrigger>
-        ))}
-    </TabsList>
-</Tabs>
+                <Tabs value={selectedTab} onValueChange={setSelectedTab} className="mb-6">
+                    <TabsList className="flex w-full md:grid md:grid-cols-8 gap-1 md:gap-2 pb-2">
+                        <TabsTrigger value="all" className="flex gap-2 min-w-[120px] md:min-w-0">
+                            <LayoutGrid className="h-4 w-4" />
+                            All Orders
+                        </TabsTrigger>
+                        {Object.entries(STATUS_CONFIG).map(([status, config]) => (
+                            <TabsTrigger
+                                key={status}
+                                value={status}
+                                className="flex gap-2 min-w-[120px] md:min-w-0 whitespace-nowrap"
+                            >
+                                {/* Change config.color to config.dot */}
+                                <div className={`h-2 w-2 rounded-full ${config.dot}`} />
+                                {config.label}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                </Tabs>
             </div>
 
             {/* Orders Table */}
-            <Card className="border-0 shadow-lg">
+            <Card className="border">
                 <CardHeader className="bg-slate-50 dark:bg-slate-800/50 border-b">
                     <div className="flex items-center justify-between">
                         <div>
@@ -553,8 +450,8 @@ const OrderManagement = () => {
                             </CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Select value={perPage} onValueChange={(v) => { 
-                                setPerPage(v); 
+                            <Select value={perPage} onValueChange={(v) => {
+                                setPerPage(v);
                                 setCurrentPage(1);
                                 fetchHistory(1);
                             }}>
@@ -580,7 +477,6 @@ const OrderManagement = () => {
                                     <TableHead className="w-[100px]">Order ID</TableHead>
                                     <TableHead>Customer/Table</TableHead>
                                     <TableHead>Items</TableHead>
-                                    <TableHead>Type</TableHead>
                                     <TableHead>Amount</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Created</TableHead>
@@ -624,10 +520,21 @@ const OrderManagement = () => {
                                                 #{startIndex + index}
                                             </TableCell>
                                             <TableCell className="font-mono font-medium">
-                                                {order.order_code || `#${order.id}`}
+                                                {order.daily_sequence ? (
+                                                    <span className="text-primary font-bold">
+                                                        #{order.daily_sequence}
+                                                    </span>
+                                                ) : (
+                                                    order.order_code || `#${order.id}`
+                                                )}
+                                                {order.daily_sequence && (
+                                                    <span className="block text-xs text-muted-foreground font-normal">
+                                                        ID: {order.order_code}
+                                                    </span>
+                                                )}
                                             </TableCell>
                                             <TableCell>
-                                                    <OrderTypeBadge order={order} />
+                                                <OrderTypeBadge order={order} />
                                             </TableCell>
                                             <TableCell>
                                                 <div className="max-w-[200px]">
@@ -645,21 +552,16 @@ const OrderManagement = () => {
                                                     )}
                                                 </div>
                                             </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    {getOrderTypeIcon(order.order_type)}
-                                                    <span>{getOrderTypeLabel(order.order_type)}</span>
-                                                </div>
-                                            </TableCell>
+
                                             <TableCell className="font-medium">
                                                 ${parseFloat(order.total || 0).toFixed(2)}
                                             </TableCell>
                                             <TableCell>
-                                                        <Badge
-                                                            variant="outline"
-                                                            className={`${getStatusClasses(order.status)}  font-medium`}>     
-                                                            {STATUS_CONFIG[order.status]?.label}
-                                                        </Badge>
+                                                <Badge
+                                                    variant="outline"
+                                                    className={`${getStatusClasses(order.status)}  font-medium`}>
+                                                    {STATUS_CONFIG[order.status]?.label}
+                                                </Badge>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex flex-col">
@@ -667,7 +569,7 @@ const OrderManagement = () => {
                                                         {format(new Date(order.created_at), "MMM dd")}
                                                     </span>
                                                     <span className="text-xs text-slate-500">
-                                                        {format(new Date(order.created_at), "HH:mm")}
+                                                        {format(new Date(order.created_at), "hh:mm a")}
                                                     </span>
                                                 </div>
                                             </TableCell>
@@ -688,7 +590,7 @@ const OrderManagement = () => {
                                                             <Printer className="h-4 w-4" />
                                                         )}
                                                     </Button>
-                                                    
+
                                                     {/* More Options Dropdown */}
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
@@ -799,6 +701,19 @@ const OrderManagement = () => {
                 </div>
             )}
 
+            {/* Hidden Print Component */}
+            <div className="hidden">
+                {orderToPrint && receiptSettings && (
+                    <div ref={printRef}>
+                        <ThermalReceipt
+                            order={orderToPrint}
+                            settings={receiptSettings}
+                            branch={branchInfo || user?.branch}
+                        />
+                    </div>
+                )}
+            </div>
+
             {/* Order Details Dialog */}
             <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
                 <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
@@ -806,7 +721,7 @@ const OrderManagement = () => {
                         <>
                             <DialogHeader>
                                 <DialogTitle className="flex items-center gap-3">
-                                    <div className={`h-3 w-3 rounded-full ${STATUS_CONFIG[selectedOrder.status]?.color || 'bg-slate-500'}`} />
+                                    <div className={`h-3 w-3 rounded-full ${STATUS_CONFIG[selectedOrder.status as keyof typeof STATUS_CONFIG]?.color || 'bg-slate-500'}`} />
                                     Order #{selectedOrder.id}
                                     <Badge variant="outline">
                                         {getOrderTypeLabel(selectedOrder.order_type)}
@@ -827,32 +742,58 @@ const OrderManagement = () => {
                                             </CardHeader>
                                             <CardContent>
                                                 <div className="space-y-4">
-                                                    {selectedOrder.items?.map((item: any) => (
-                                                        <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
-                                                            <div className="flex-1">
-                                                                <div className="font-medium">{item.product?.name}</div>
-                                                                {item.notes && (
-                                                                    <div className="text-sm text-slate-500 mt-1">
-                                                                        Note: {item.notes}
+                                                    {selectedOrder.items?.map((item: any) => {
+                                                        const { size, adds, presets, note } = parseItemRemark(item.notes);
+                                                        return (
+                                                            <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                                                <div className="flex-1">
+                                                                    <div className="font-medium">{item.product?.name}</div>
+
+                                                                    {/* Item Modifiers & Notes */}
+                                                                    <div className="text-sm mt-1 space-y-1">
+                                                                        {size && (
+                                                                            <div className="text-indigo-600 font-medium text-xs">
+                                                                                [{size}]
+                                                                            </div>
+                                                                        )}
+                                                                        {presets.length > 0 && (
+                                                                            <div className="text-slate-600 text-xs">
+                                                                                {presets.join(', ')}
+                                                                            </div>
+                                                                        )}
+                                                                        {adds.length > 0 && (
+                                                                            <div className="flex flex-wrap gap-1">
+                                                                                {adds.map((add, i) => (
+                                                                                    <span key={i} className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded text-[10px] font-medium">
+                                                                                        + {add}
+                                                                                    </span>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                        {note && (
+                                                                            <div className="text-amber-700 dark:text-amber-500 italic text-xs bg-amber-50 dark:bg-amber-950/20 px-2 py-1 rounded w-fit">
+                                                                                Note: {note}
+                                                                            </div>
+                                                                        )}
                                                                     </div>
-                                                                )}
+                                                                </div>
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="text-center">
+                                                                        <div className="text-sm text-slate-500">Qty</div>
+                                                                        <div className="font-medium">{item.quantity}</div>
+                                                                    </div>
+                                                                    <div className="text-center w-20">
+                                                                        <div className="text-sm text-slate-500">Price</div>
+                                                                        <div className="font-medium">${item.final_unit_price || item.product?.price}</div>
+                                                                    </div>
+                                                                    <div className="text-center w-20">
+                                                                        <div className="text-sm text-slate-500">Total</div>
+                                                                        <div className="font-medium text-green-600">${item.item_total || item.total}</div>
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="text-center">
-                                                                    <div className="text-sm text-slate-500">Qty</div>
-                                                                    <div className="font-medium">{item.quantity}</div>
-                                                                </div>
-                                                                <div className="text-center">
-                                                                    <div className="text-sm text-slate-500">Price</div>
-                                                                    <div className="font-medium">${item.product?.price || '0.00'}</div>
-                                                                </div>
-                                                                <div className="text-center">
-                                                                    <div className="text-sm text-slate-500">Total</div>
-                                                                    <div className="font-medium text-green-600">${item.total}</div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             </CardContent>
                                         </Card>
@@ -870,7 +811,7 @@ const OrderManagement = () => {
                                         )}
                                     </div>
 
-                                    {/* Order Summary */}
+                                    {/* Order Summary Column */}
                                     <div className="space-y-6">
                                         <Card>
                                             <CardHeader>
@@ -880,13 +821,21 @@ const OrderManagement = () => {
                                                 <div className="space-y-3">
                                                     <div className="flex justify-between">
                                                         <span className="text-slate-600">Subtotal</span>
-                                                        <span>${selectedOrder.subtotal || selectedOrder.total}</span>
+                                                        <span>${(parseFloat(selectedOrder.subtotal || 0) - parseFloat(selectedOrder.item_discount_total || 0)).toFixed(2)}</span>
                                                     </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-600">Tax</span>
-                                                        <span>${selectedOrder.tax || '0.00'}</span>
-                                                    </div>
-                                                    {selectedOrder.delivery_fee && (
+                                                    {(parseFloat(selectedOrder.order_level_discount || 0) > 0 || parseFloat(selectedOrder.order_discount_amount || 0) > 0) && (
+                                                        <div className="flex justify-between text-red-500">
+                                                            <span>Discount</span>
+                                                            <span>-${parseFloat(selectedOrder.order_discount_amount || selectedOrder.order_level_discount || 0).toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+                                                    {(parseFloat(selectedOrder.tax_amount || 0) > 0) && (
+                                                        <div className="flex justify-between">
+                                                            <span className="text-slate-600">Tax</span>
+                                                            <span>${parseFloat(selectedOrder.tax_amount || 0).toFixed(2)}</span>
+                                                        </div>
+                                                    )}
+                                                    {parseFloat(selectedOrder.delivery_fee || 0) > 0 && (
                                                         <div className="flex justify-between">
                                                             <span className="text-slate-600">Delivery Fee</span>
                                                             <span>${selectedOrder.delivery_fee}</span>
@@ -902,26 +851,28 @@ const OrderManagement = () => {
                                             </CardContent>
                                         </Card>
 
-                                        {/* Customer Info */}
+                                        {/* Order Info (Table/Delivery) */}
                                         <Card>
                                             <CardHeader>
-                                                <CardTitle className="text-lg">Customer Information</CardTitle>
+                                                <CardTitle className="text-lg">Order Information</CardTitle>
                                             </CardHeader>
                                             <CardContent className="space-y-3">
-                                                <div className="flex items-center gap-2">
-                                                    <UserIcon className="h-4 w-4 text-slate-500" />
-                                                    <span>{selectedOrder.customer_name || 'Walk-in Customer'}</span>
-                                                </div>
-                                                {selectedOrder.phone && (
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="h-4 w-4 text-slate-500">📱</div>
-                                                        <span>{selectedOrder.phone}</span>
-                                                    </div>
-                                                )}
-                                                {selectedOrder.table_number && (
+                                                {selectedOrder.restaurant_table && (
                                                     <div className="flex items-center gap-2">
                                                         <Utensils className="h-4 w-4 text-slate-500" />
-                                                        <span>Table {selectedOrder.table_number}</span>
+                                                        <span>Table {selectedOrder.restaurant_table.table_number}</span>
+                                                    </div>
+                                                )}
+                                                {selectedOrder.delivery_partner && (
+                                                    <div className="flex items-center gap-2">
+                                                        <Truck className="h-4 w-4 text-slate-500" />
+                                                        <span>Delivery: {selectedOrder.delivery_partner.name}</span>
+                                                    </div>
+                                                )}
+                                                {!selectedOrder.restaurant_table && !selectedOrder.delivery_partner && (
+                                                    <div className="flex items-center gap-2">
+                                                        <UserIcon className="h-4 w-4 text-slate-500" />
+                                                        <span>Walk-in Customer</span>
                                                     </div>
                                                 )}
                                             </CardContent>
@@ -953,26 +904,22 @@ const OrderManagement = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* Hidden Receipt for Printing */}
-            <div 
-                ref={printReceiptRef} 
-                style={{ 
-                    position: 'absolute', 
-                    left: -10000, 
-                    top: -10000,
-                    width: '80mm',
-                    backgroundColor: 'white',
-                    zIndex: -9999
+            {/* Cancel Order Modal */}
+            <OrderCancellationModal
+                open={cancelModal.open}
+                onOpenChange={(open) => !open && setCancelModal({ open: false, order: null })}
+                orderId={cancelModal.order?.id || null}
+                requiresNote={user?.branch?.requires_cancel_note === 1}
+                onConfirm={(note) => {
+                    if (cancelModal.order) {
+                        handleUpdateStatus(
+                            cancelModal.order.id,
+                            ORDER_STATUS.CANCELLED,
+                            note
+                        );
+                    }
                 }}
-            >
-                {printData && (
-                    <ThermalReceipt
-                        settings={printData.settings}
-                        order={printData.order}
-                        branch={printData.branch}
-                    />
-                )}
-            </div>
+            />
         </div>
     );
 };

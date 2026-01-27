@@ -121,7 +121,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/branches/schedules', [BranchController::class, 'getSchedules']);
             Route::apiResource('branches', BranchController::class);
             Route::post('branches/{id}/clone', [BranchController::class, 'clone']);
-            Route::apiResource('staff', StaffController::class); // This handles the POST to /api/admin/staff
+            Route::apiResource('staff', StaffController::class);
+            Route::put('/staff/{id}/status', [StaffController::class, 'updateStatus']);
 
             Route::post('/branches/{id}/appearance', [BranchController::class, 'updateAppearance']);
             Route::post('/branches/{id}/appearance/reset', [BranchController::class, 'resetAppearance']);

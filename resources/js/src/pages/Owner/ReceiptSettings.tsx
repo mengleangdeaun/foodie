@@ -1,29 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Printer, 
-  Save, 
-  Upload, 
-  Type, 
-  Palette, 
-  Maximize, 
-  Loader2, 
-  QrCode, 
-  ImageIcon,
-  Download,
-  Eye,
-  Settings,
-  PaintBucket,
-  Layout,
-  Smartphone,
-  Tablet,
-  Monitor
+import {
+    Printer,
+    Save,
+    Upload,
+    Type,
+    Palette,
+    Maximize,
+    Loader2,
+    QrCode,
+    ImageIcon,
+    Download,
+    Eye,
+    Settings,
+    PaintBucket,
+    Layout,
+    Smartphone,
+    Tablet,
+    Monitor
 } from 'lucide-react';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle,
-  CardDescription 
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    CardDescription
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,28 +35,30 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useReactToPrint } from 'react-to-print';
 import { ThermalReceipt } from '@/components/printing/ThermalReceipt';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from "@/hooks/use-toast";
 import api from '@/util/api';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const ReceiptSettings = () => {
+    const { user } = useAuth();
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [previewDevice, setPreviewDevice] = useState<"mobile" | "tablet" | "desktop">("desktop");
-    const [brandingPresets, setBrandingPresets] = useState<any>({ 
-      colors: [], 
-      fonts: [], 
-      store_name: '' 
+    const [previewDevice, setPreviewDevice] = useState<"mobile" | "tablet" | "desktop">("mobile");
+    const [brandingPresets, setBrandingPresets] = useState<any>({
+        colors: [],
+        fonts: [],
+        store_name: ''
     });
-    
+
     const [settings, setSettings] = useState({
         store_name: '',
         header_text: '',
         footer_text: '',
         primary_color: '#000000',
         font_size_base: 14,
-        font_family: 'font-mono',
+        font_family: '',
         logo_size: 80,
         qr_code_size: 90,
         show_logo: true,
@@ -77,8 +79,8 @@ const ReceiptSettings = () => {
     const logoInputRef = useRef<HTMLInputElement>(null);
     const qrInputRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => { 
-      fetchSettings(); 
+    useEffect(() => {
+        fetchSettings();
     }, []);
 
     const fetchSettings = async () => {
@@ -87,13 +89,13 @@ const ReceiptSettings = () => {
             if (res.data.settings) setSettings(res.data.settings);
             if (res.data.branding_presets) setBrandingPresets(res.data.branding_presets);
         } catch (error) {
-            toast({ 
-              variant: "destructive", 
-              title: "Error", 
-              description: "Failed to load receipt settings" 
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to load receipt settings"
             });
-        } finally { 
-          setLoading(false); 
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -102,7 +104,7 @@ const ReceiptSettings = () => {
     const handleSave = async () => {
         setSaving(true);
         const formData = new FormData();
-        
+
         Object.entries(settings).forEach(([key, value]) => {
             if (!key.includes('_url') && !key.endsWith('_file')) {
                 let val = value;
@@ -119,22 +121,22 @@ const ReceiptSettings = () => {
         }
 
         try {
-            const res = await api.post('/admin/settings/receipt', formData, { 
-                headers: { 'Content-Type': 'multipart/form-data' } 
+            const res = await api.post('/admin/settings/receipt', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
-            toast({ 
-              title: "Success", 
-              description: "Receipt settings saved successfully" 
+            toast({
+                title: "Success",
+                description: "Receipt settings saved successfully"
             });
             setSettings(res.data.settings);
-        } catch (error: any) { 
-            toast({ 
-              variant: "destructive", 
-              title: "Error", 
-              description: error.response?.data?.message || "Could not save settings" 
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: error.response?.data?.message || "Could not save settings"
             });
-        } finally { 
-            setSaving(false); 
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -156,35 +158,35 @@ const ReceiptSettings = () => {
     };
 
     const getDeviceDimensions = () => {
-      switch (previewDevice) {
-        case 'mobile': return { 
-          width: '280px',
-          height: '560px',
-          scale: 0.8
-        };
-        case 'tablet': return { 
-          width: '512px',
-          height: '683px',
-          scale: 0.7
-        };
-        case 'desktop': return { 
-          width: '720px',
-          height: '480px',
-          scale: 0.8
-        };
-        default: return { 
-          width: '280px', 
-          height: '560px',
-          scale: 0.8
-        };
-      }
+        switch (previewDevice) {
+            case 'mobile': return {
+                width: '320px',
+                height: '860px',
+                scale: 0.8
+            };
+            case 'tablet': return {
+                width: '512px',
+                height: '783px',
+                scale: 0.7
+            };
+            case 'desktop': return {
+                width: '720px',
+                height: '680px',
+                scale: 0.8
+            };
+            default: return {
+                width: '280px',
+                height: '560px',
+                scale: 0.8
+            };
+        }
     };
 
     if (loading) return (
-      <div className="h-96 flex flex-col items-center justify-center space-y-4">
-        <Loader2 className="animate-spin h-10 w-10 text-primary" />
-        <p className="text-muted-foreground">Loading receipt settings...</p>
-      </div>
+        <div className="h-96 flex flex-col items-center justify-center space-y-4">
+            <Loader2 className="animate-spin h-10 w-10 text-primary" />
+            <p className="text-muted-foreground">Loading receipt settings...</p>
+        </div>
     );
 
     return (
@@ -201,18 +203,18 @@ const ReceiptSettings = () => {
                     </p>
                 </div>
                 <div className="flex gap-3">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => handlePrint()} 
-                      className="gap-2"
+                    <Button
+                        variant="outline"
+                        onClick={() => handlePrint()}
+                        className="gap-2"
                     >
                         <Printer className="h-4 w-4" />
                         Test Print
                     </Button>
-                    <Button 
-                      onClick={handleSave} 
-                      disabled={saving} 
-                      className="gap-2 px-6"
+                    <Button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="gap-2 px-6"
                     >
                         {saving ? (
                             <Loader2 className="animate-spin h-4 w-4" />
@@ -262,12 +264,12 @@ const ReceiptSettings = () => {
                                                 Branch Colors Available
                                             </Badge>
                                         </div>
-                                        
+
                                         <div className="flex items-center gap-4 p-4 rounded-lg border bg-card">
                                             <Input
                                                 type="color"
                                                 value={settings.primary_color}
-                                                onChange={(e) => setSettings({...settings, primary_color: e.target.value})}
+                                                onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
                                                 className="w-16 h-16 p-1 cursor-pointer rounded-lg"
                                             />
                                             <div className="flex-1">
@@ -276,7 +278,7 @@ const ReceiptSettings = () => {
                                                 </Label>
                                                 <Input
                                                     value={settings.primary_color}
-                                                    onChange={(e) => setSettings({...settings, primary_color: e.target.value})}
+                                                    onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
                                                     className="font-mono"
                                                 />
                                             </div>
@@ -290,12 +292,11 @@ const ReceiptSettings = () => {
                                                     {brandingPresets.colors.map((color: string, index: number) => (
                                                         <button
                                                             key={index}
-                                                            onClick={() => setSettings({...settings, primary_color: color})}
-                                                            className={`relative w-10 h-10 rounded-full border-2 transition-all hover:scale-110 hover:shadow-md ${
-                                                                settings.primary_color === color 
-                                                                    ? 'border-primary ring-2 ring-primary/20' 
-                                                                    : 'border-muted'
-                                                            }`}
+                                                            onClick={() => setSettings({ ...settings, primary_color: color })}
+                                                            className={`relative w-10 h-10 rounded-full border-2 transition-all hover:scale-110 hover:shadow-md ${settings.primary_color === color
+                                                                ? 'border-primary ring-2 ring-primary/20'
+                                                                : 'border-muted'
+                                                                }`}
                                                             style={{ backgroundColor: color }}
                                                             title={`Brand Color ${index + 1}`}
                                                         >
@@ -318,13 +319,13 @@ const ReceiptSettings = () => {
                                                 <div className="space-y-3">
                                                     <Label>Font Family</Label>
                                                     <div className="flex flex-wrap gap-2">
-                                                        {['font-mono', 'font-sans', 'font-serif', ...brandingPresets.fonts].map((font) => (
+                                                        {['font-mono', 'font-sans', 'font-serif','font-roboto', ...brandingPresets.fonts].map((font) => (
                                                             <Button
                                                                 key={font}
                                                                 variant={settings.font_family === font ? "default" : "outline"}
                                                                 size="sm"
                                                                 className={`text-xs ${font} transition-all`}
-                                                                onClick={() => setSettings({...settings, font_family: font})}
+                                                                onClick={() => setSettings({ ...settings, font_family: font })}
                                                             >
                                                                 {font.replace('font-', '').replace(/([A-Z])/g, ' $1').trim()}
                                                             </Button>
@@ -338,7 +339,7 @@ const ReceiptSettings = () => {
                                                         min={10}
                                                         max={20}
                                                         step={1}
-                                                        onValueChange={([v]) => setSettings({...settings, font_size_base: v})}
+                                                        onValueChange={([v]) => setSettings({ ...settings, font_size_base: v })}
                                                     />
                                                     <div className="flex justify-between text-xs text-muted-foreground">
                                                         <span>Small</span>
@@ -370,7 +371,7 @@ const ReceiptSettings = () => {
                                                 <Label>Logo</Label>
                                                 <Switch
                                                     checked={settings.show_logo}
-                                                    onCheckedChange={(checked) => setSettings({...settings, show_logo: checked})}
+                                                    onCheckedChange={(checked) => setSettings({ ...settings, show_logo: checked })}
                                                 />
                                             </div>
                                             <div
@@ -413,7 +414,7 @@ const ReceiptSettings = () => {
                                                     min={40}
                                                     max={180}
                                                     step={10}
-                                                    onValueChange={([v]) => setSettings({...settings, logo_size: v})}
+                                                    onValueChange={([v]) => setSettings({ ...settings, logo_size: v })}
                                                     disabled={!settings.show_logo}
                                                 />
                                             </div>
@@ -425,7 +426,7 @@ const ReceiptSettings = () => {
                                                 <Label>QR Code</Label>
                                                 <Switch
                                                     checked={settings.show_qr}
-                                                    onCheckedChange={(checked) => setSettings({...settings, show_qr: checked})}
+                                                    onCheckedChange={(checked) => setSettings({ ...settings, show_qr: checked })}
                                                 />
                                             </div>
                                             <div
@@ -468,7 +469,7 @@ const ReceiptSettings = () => {
                                                     min={40}
                                                     max={180}
                                                     step={10}
-                                                    onValueChange={([v]) => setSettings({...settings, qr_code_size: v})}
+                                                    onValueChange={([v]) => setSettings({ ...settings, qr_code_size: v })}
                                                     disabled={!settings.show_qr}
                                                 />
                                             </div>
@@ -498,7 +499,7 @@ const ReceiptSettings = () => {
                                                 min={58}
                                                 max={110}
                                                 step={1}
-                                                onValueChange={([v]) => setSettings({...settings, paper_width: v})}
+                                                onValueChange={([v]) => setSettings({ ...settings, paper_width: v })}
                                             />
                                             <div className="flex justify-between text-xs text-muted-foreground">
                                                 <span>58mm (Standard)</span>
@@ -514,7 +515,7 @@ const ReceiptSettings = () => {
                                                 min={5}
                                                 max={30}
                                                 step={1}
-                                                onValueChange={([v]) => setSettings({...settings, margin_size: v})}
+                                                onValueChange={([v]) => setSettings({ ...settings, margin_size: v })}
                                             />
                                         </div>
                                     </div>
@@ -531,7 +532,7 @@ const ReceiptSettings = () => {
                                                 </div>
                                                 <Switch
                                                     checked={settings.show_header}
-                                                    onCheckedChange={(checked) => setSettings({...settings, show_header: checked})}
+                                                    onCheckedChange={(checked) => setSettings({ ...settings, show_header: checked })}
                                                 />
                                             </div>
                                             <div className="flex items-center justify-between p-3 rounded-lg border">
@@ -541,7 +542,7 @@ const ReceiptSettings = () => {
                                                 </div>
                                                 <Switch
                                                     checked={settings.show_footer}
-                                                    onCheckedChange={(checked) => setSettings({...settings, show_footer: checked})}
+                                                    onCheckedChange={(checked) => setSettings({ ...settings, show_footer: checked })}
                                                 />
                                             </div>
                                             <div className="flex items-center justify-between p-3 rounded-lg border">
@@ -551,17 +552,17 @@ const ReceiptSettings = () => {
                                                 </div>
                                                 <Switch
                                                     checked={settings.show_border}
-                                                    onCheckedChange={(checked) => setSettings({...settings, show_border: checked})}
+                                                    onCheckedChange={(checked) => setSettings({ ...settings, show_border: checked })}
                                                 />
                                             </div>
                                             <div className="flex items-center justify-between p-3 rounded-lg border">
                                                 <div className="space-y-0.5">
-                                                    <Label>Show Customer Info</Label>
-                                                    <p className="text-xs text-muted-foreground">Customer Name and Info</p>
+                                                    <Label>Show Table/Delivery Info</Label>
+                                                    <p className="text-xs text-muted-foreground">Table Number and Delivery Info</p>
                                                 </div>
                                                 <Switch
                                                     checked={settings.show_customer_info}
-                                                    onCheckedChange={(checked) => setSettings({...settings, show_customer_info: checked})}
+                                                    onCheckedChange={(checked) => setSettings({ ...settings, show_customer_info: checked })}
                                                 />
                                             </div>
                                         </div>
@@ -587,7 +588,7 @@ const ReceiptSettings = () => {
                                             <Label>Store Name</Label>
                                             <Input
                                                 value={settings.store_name}
-                                                onChange={(e) => setSettings({...settings, store_name: e.target.value})}
+                                                onChange={(e) => setSettings({ ...settings, store_name: e.target.value })}
                                                 placeholder="Enter store name"
                                                 className="mt-2"
                                             />
@@ -596,7 +597,7 @@ const ReceiptSettings = () => {
                                             <Label>Header Text</Label>
                                             <Input
                                                 value={settings.header_text}
-                                                onChange={(e) => setSettings({...settings, header_text: e.target.value})}
+                                                onChange={(e) => setSettings({ ...settings, header_text: e.target.value })}
                                                 placeholder="Welcome to our store!"
                                                 className="mt-2"
                                             />
@@ -608,7 +609,7 @@ const ReceiptSettings = () => {
                                             <Label>Footer Text</Label>
                                             <Input
                                                 value={settings.footer_text}
-                                                onChange={(e) => setSettings({...settings, footer_text: e.target.value})}
+                                                onChange={(e) => setSettings({ ...settings, footer_text: e.target.value })}
                                                 placeholder="Thank you for your purchase!"
                                                 className="mt-2"
                                             />
@@ -669,8 +670,8 @@ const ReceiptSettings = () => {
 
                             {/* Preview Container */}
                             <div className="mt-4">
-                                <div className="flex justify-center items-center min-h-[400px] bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg p-4">
-                                    <div 
+                                <div className="flex justify-center items-center min-h-[600px] bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-lg p-4">
+                                    <div
                                         className="relative bg-white dark:bg-slate-800 overflow-hidden shadow-2xl mx-auto"
                                         style={{
                                             width: getDeviceDimensions().width,
@@ -682,9 +683,9 @@ const ReceiptSettings = () => {
                                         }}
                                     >
                                         {/* Receipt Preview */}
-                                        <div 
+                                        <div
                                             className={`h-full flex flex-col p-4 ${settings.font_family}`}
-                                            style={{ 
+                                            style={{
                                                 fontSize: `${settings.font_size_base}px`,
                                                 color: settings.primary_color,
                                                 backgroundColor: 'white',
@@ -692,95 +693,267 @@ const ReceiptSettings = () => {
                                                 margin: `${settings.margin_size}px auto`
                                             }}
                                         >
-                                            {/* Header */}
+                                            {/* Logo Section */}
+                                            {settings.show_logo && settings.logo_url && (
+                                                <div style={{
+                                                    textAlign: 'center',
+                                                    marginBottom: '10px',
+                                                    width: '100%',
+                                                    display: settings.show_logo ? 'block' : 'none'
+                                                }}>
+                                                    <img
+                                                        src={settings.logo_url}
+                                                        style={{
+                                                            width: `${settings.logo_size}px`,
+                                                            height: 'auto',
+                                                            maxWidth: '100%',
+                                                            display: 'block',
+                                                            margin: '0 auto',
+                                                            filter: 'grayscale(100%)'
+                                                        }}
+                                                        alt="Logo"
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {/* Header Section */}
                                             {settings.show_header && (
-                                                <div className="text-center mb-4">
-                                                    {settings.show_logo && settings.logo_url && (
-                                                        <img 
-                                                            src={settings.logo_url} 
-                                                            style={{ width: `${settings.logo_size}px` }} 
-                                                            className="mx-auto mb-3 dark:invert" 
-                                                            alt="Logo"
-                                                        />
+                                                <div style={{
+                                                    textAlign: 'center',
+                                                    width: '100%',
+                                                    marginBottom: '10px',
+                                                    display: settings.show_header ? 'block' : 'none'
+                                                }}>
+                                                    <h1 style={{
+                                                        margin: '0 0 5px 0',
+                                                        fontSize: `${(settings.font_size_base || 12) + 2}px`,
+                                                        fontWeight: 'bold',
+                                                        textTransform: 'uppercase'
+                                                    }}>
+                                                        {settings.store_name || user?.branch?.branch_name || 'STORE NAME'}
+                                                    </h1>
+
+                                                    {/* Branch Address */}
+                                                    {!!user?.branch?.location && (
+                                                        <p style={{
+                                                            margin: '3px 0',
+                                                            fontSize: `${(settings.font_size_base || 12) - 1}px`,
+                                                            lineHeight: '1.1'
+                                                        }}>
+                                                            📍 {user.branch.location}
+                                                        </p>
                                                     )}
-                                                    <h2 className="font-bold text-lg uppercase tracking-wider">
-                                                        {settings.store_name || 'YOUR STORE'}
-                                                    </h2>
+
+                                                    {/* Branch Contact */}
+                                                    {!!user?.branch?.contact_phone && (
+                                                        <p style={{
+                                                            margin: '3px 0',
+                                                            fontSize: `${(settings.font_size_base || 12) - 1}px`
+                                                        }}>
+                                                            📞 {user.branch.contact_phone}
+                                                        </p>
+                                                    )}
+
                                                     {settings.header_text && (
-                                                        <p className="text-sm mt-2 text-muted-foreground">
+                                                        <p style={{
+                                                            margin: '5px 0',
+                                                            whiteSpace: 'pre-line',
+                                                            fontSize: `${(settings.font_size_base || 12) - 1}px`
+                                                        }}>
                                                             {settings.header_text}
                                                         </p>
                                                     )}
                                                 </div>
                                             )}
 
-                                            <Separator className="my-4" />
+                                            <div style={{ borderBottom: '1px dashed #000', margin: '10px 0' }}></div>
 
-                                            {/* Order Items */}
-                                            <div className="space-y-3 flex-1">
-                                                <div className="flex justify-between items-center text-sm">
-                                                    <span className="font-semibold">Item</span>
-                                                    <span className="font-semibold">Amount</span>
+                                            {/* Order Information */}
+                                            <div style={{ marginBottom: '10px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                                                    <span>Date:</span>
+                                                    <span>{new Date().toLocaleDateString()} {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                 </div>
-                                                <div className="space-y-2">
-                                                    {[
-                                                        { name: 'Espresso Shot', price: '$4.00', qty: 2 },
-                                                        { name: 'Cappuccino', price: '$5.50', qty: 1 },
-                                                        { name: 'Blueberry Muffin', price: '$3.75', qty: 1 }
-                                                    ].map((item, index) => (
-                                                        <div key={index} className="flex justify-between items-center text-sm">
-                                                            <span>{item.qty}x {item.name}</span>
-                                                            <span>{item.price}</span>
+
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                                                    <span>Order #:</span>
+                                                    <span>ORD-001</span>
+                                                </div>
+
+                                                {/* Mock Table */}
+                                                {settings.show_customer_info && (
+                                                    <div style={{
+                                                        marginTop: '5px',
+                                                        padding: '3px 5px',
+                                                        backgroundColor: '#f5f5f5',
+                                                        border: '1px solid #ddd',
+                                                        borderRadius: '3px'
+                                                    }}>
+                                                        <div style={{ fontWeight: 'bold', textAlign: 'center' }}>
+                                                            🪑 Table: 5
                                                         </div>
-                                                    ))}
-                                                </div>
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            <Separator className="my-4" />
+                                            {/* Items Table */}
+                                            <table style={{
+                                                width: '100%',
+                                                borderCollapse: 'collapse',
+                                                marginBottom: '15px'
+                                            }}>
+                                                <thead>
+                                                    <tr style={{ borderBottom: '1px solid #000' }}>
+                                                        <th style={{ textAlign: 'left', paddingBottom: '5px' }}>Item</th>
+                                                        <th style={{ textAlign: 'right', paddingBottom: '5px' }}>Qty</th>
+                                                        <th style={{ textAlign: 'right', paddingBottom: '5px' }}>Price</th>
+                                                        <th style={{ textAlign: 'right', paddingBottom: '5px' }}>Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {[
+                                                        { name: 'Espresso Shot', price: 4.00, qty: 2, total: 8.00 },
+                                                        { name: 'Cappuccino', price: 5.50, qty: 1, total: 5.50 },
+                                                        { name: 'Blueberry Muffin', price: 3.75, qty: 1, total: 3.75 }
+                                                    ].map((item, index) => (
+                                                        <tr key={index} style={{ borderBottom: '1px dashed #ccc' }}>
+                                                            <td style={{
+                                                                verticalAlign: 'top',
+                                                                padding: '4px 0',
+                                                                maxWidth: '60%',
+                                                                wordBreak: 'break-word'
+                                                            }}>
+                                                                {item.name}
+                                                            </td>
+                                                            <td style={{
+                                                                textAlign: 'right',
+                                                                verticalAlign: 'top',
+                                                                padding: '4px 5px'
+                                                            }}>
+                                                                {item.qty}
+                                                            </td>
+                                                            <td style={{
+                                                                textAlign: 'right',
+                                                                verticalAlign: 'top',
+                                                                padding: '4px 5px'
+                                                            }}>
+                                                                ${item.price.toFixed(2)}
+                                                            </td>
+                                                            <td style={{
+                                                                textAlign: 'right',
+                                                                verticalAlign: 'top',
+                                                                padding: '4px 0',
+                                                                fontWeight: 'bold'
+                                                            }}>
+                                                                ${item.total.toFixed(2)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
 
-                                            {/* Totals */}
-                                            <div className="space-y-2 text-sm">
-                                                <div className="flex justify-between">
-                                                    <span>Subtotal</span>
+                                            {/* Totals Section */}
+                                            <div style={{ borderTop: '2px solid #000', paddingTop: '10px', marginBottom: '15px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <span>Subtotal:</span>
                                                     <span>$17.25</span>
                                                 </div>
-                                                <div className="flex justify-between">
-                                                    <span>Tax</span>
-                                                    <span>$1.38</span>
+
+                                                <div style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    color: '#d32f2f',
+                                                    marginBottom: '4px'
+                                                }}>
+                                                    <span>Discount:</span>
+                                                    <span style={{ fontWeight: '600' }}>
+                                                        -$1.73
+                                                    </span>
                                                 </div>
-                                                <div className="flex justify-between font-bold text-base">
-                                                    <span>TOTAL</span>
-                                                    <span>$18.63</span>
+
+                                                {/* Tax Section - Real Data */}
+                                                {!!user?.branch?.tax_is_active && (
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <span>{user.branch.tax_name || 'Tax'} ({user.branch.tax_rate || 0}%):</span>
+                                                        <span>
+                                                            {/* Mock calculation: (17.25 - 1.73) * rate% */}
+                                                            ${((17.25 - 1.73) * ((user.branch.tax_rate || 0) / 100)).toFixed(2)}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                <div style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    fontWeight: 'bold',
+                                                    fontSize: `${(settings.font_size_base || 12) + 1}px`,
+                                                    marginTop: '5px',
+                                                    borderTop: '1px dashed #000',
+                                                    paddingTop: '5px'
+                                                }}>
+                                                    <span>TOTAL:</span>
+                                                    <span>
+                                                        ${((17.25 - 1.73) + ((user?.branch?.tax_is_active ? (17.25 - 1.73) * ((user?.branch?.tax_rate || 0) / 100) : 0))).toFixed(2)}
+                                                    </span>
                                                 </div>
                                             </div>
 
-                                            {/* QR Code */}
-                                            {settings.show_qr && settings.qr_code_url && (
-                                                <div className="mt-6 flex flex-col items-center">
-                                                    <img 
-                                                        src={settings.qr_code_url} 
-                                                        style={{ width: `${settings.qr_code_size}px` }} 
-                                                        className="dark:invert"
+                                            {/* QR Code Section */}
+                                            {settings.show_qr && (settings.qr_code_file || settings.qr_code_url) && (
+                                                <div style={{
+                                                    marginTop: '15px',
+                                                    paddingTop: '15px',
+                                                    borderTop: '1px dashed #000',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    width: '100%'
+                                                }}>
+                                                    <img
+                                                        src={settings.qr_code_url || ''}
+                                                        style={{
+                                                            width: `${settings.qr_code_size}px`,
+                                                            height: `${settings.qr_code_size}px`,
+                                                            imageRendering: 'crisp-edges',
+                                                            display: 'block',
+                                                            margin: '0 auto',
+                                                            filter: 'grayscale(100%)'
+                                                        }}
                                                         alt="QR Code"
                                                     />
-                                                    <p className="text-xs text-muted-foreground mt-2">
-                                                        Scan for digital receipt
+                                                    <p style={{
+                                                        fontSize: '9px',
+                                                        fontWeight: 'bold',
+                                                        marginTop: '5px',
+                                                        textAlign: 'center'
+                                                    }}>
+                                                        SCAN TO PAY
                                                     </p>
                                                 </div>
                                             )}
 
-                                            {/* Footer */}
+                                            {/* Footer Section */}
                                             {settings.show_footer && (
-                                                <>
-                                                    <Separator className="my-4" />
-                                                    <div className="text-center text-xs text-muted-foreground">
-                                                        {settings.footer_text || 'Thank you for your purchase!'}
-                                                        <p className="mt-2">
-                                                            {new Date().toLocaleDateString()} • Order #12345
-                                                        </p>
-                                                    </div>
-                                                </>
+                                                <footer style={{
+                                                    textAlign: 'center',
+                                                    marginTop: '15px',
+                                                    fontSize: `${(settings.font_size_base || 12) - 1}px`,
+                                                    fontStyle: 'italic',
+                                                    paddingTop: '10px',
+                                                    borderTop: '1px dashed #000'
+                                                }}>
+                                                    {settings.footer_text || 'Thank you for your purchase!'}
+                                                </footer>
                                             )}
+
+                                            <div style={{
+                                                textAlign: 'center',
+                                                fontSize: '8px',
+                                                marginTop: '10px',
+                                                color: '#666'
+                                            }}>
+                                                Generated on {new Date().toLocaleDateString()}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -807,53 +980,54 @@ const ReceiptSettings = () => {
 
             {/* Hidden Print Component */}
             <div className="hidden">
-                <ThermalReceipt 
-                    ref={componentRef} 
-                    settings={settings} 
+                <ThermalReceipt
+                    ref={componentRef}
+                    settings={settings}
                     order={mockOrder}
                     branch={brandingPresets} // Pass branch info including contact_phone
-                    />
+                />
             </div>
         </div>
     );
 };
 
 // Update the mockOrder at the bottom of ReceiptSettings.tsx
-const mockOrder = { 
-  order_code: '12345',
-  total: '18.63',
-  subtotal: '17.25',
-  tax: '1.38',
-  table_number: 'A5',
-  order_type: 'dine_in', // 'dine_in', 'takeaway', or 'delivery'
-  payment_method: 'Cash',
-  payment_status: 'paid',
-  items: [
-    { 
-      quantity: 2, 
-      total: '8.00', 
-      product: { 
-        name: 'Espresso Shot',
-        price: '4.00'
-      } 
-    },
-    { 
-      quantity: 1, 
-      total: '5.50', 
-      product: { 
-        name: 'Cappuccino',
-        price: '5.50'
-      } 
-    },
-    { 
-      quantity: 1, 
-      total: '3.75', 
-      product: { 
-        name: 'Blueberry Muffin',
-        price: '3.75'
-      } 
-    }
-  ]
+const mockOrder = {
+    order_code: '12345',
+    total: '18.63',
+    subtotal: '17.25',
+    tax_amount: '1.38',
+    tax_rate: '10',
+    order_level_discount: '0',
+    table_number: 'A5',
+    created_at: new Date().toISOString(),
+    items: [
+        {
+            quantity: 2,
+            total: '8.00',
+            product: {
+                name: 'Espresso Shot',
+                price: '4.00'
+            },
+            remark: 'Extra hot'
+        },
+        {
+            quantity: 1,
+            total: '5.50',
+            product: {
+                name: 'Cappuccino',
+                price: '5.50'
+            }
+        },
+        {
+            quantity: 1,
+            total: '3.75',
+            product: {
+                name: 'Blueberry Muffin',
+                price: '3.75'
+            }
+        }
+    ]
 };
 
 // When using ThermalReceipt in ReceiptSettings.tsx:

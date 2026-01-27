@@ -20,12 +20,12 @@ class ReceiptSetting extends Model
         'header_text',
         'footer_text',
         'show_logo',
-        'show_qr', // new
-        'show_header', // new
-        'show_footer', // new
-        'show_border', // new
-        'paper_width', // new
-        'margin_size', // new
+        'show_qr', 
+        'show_header', 
+        'show_footer', 
+        'show_border',
+        'paper_width', 
+        'margin_size', 
         'show_order_id',
         'show_customer_info',
     ];

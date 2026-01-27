@@ -7,6 +7,12 @@ interface Branch {
     primary_color: string;
     font_family: string;
     logo_path: string;
+    location?: string;
+    contact_phone?: string;
+    tax_is_active?: boolean;
+    tax_name?: string;
+    tax_rate?: number;
+    requires_cancel_note?: number;
 }
 
 interface User {
@@ -15,7 +21,7 @@ interface User {
     email: string;
     role: string;
     branch_id: number | null;
-    branch?: Branch; // Optional branch data
+    branch?: Branch; 
     permissions: Record<string, Record<string, boolean>>;
     avatar?: string;
 }

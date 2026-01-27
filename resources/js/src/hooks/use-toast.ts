@@ -1,29 +1,32 @@
 "use client"
 
 import { toast as sonnerToast } from "sonner"
+import React from "react" // Import React for React.ReactNode
 
 interface ToastProps {
   title?: string
   description?: string
   variant?: "default" | "destructive"
   duration?: number
-  // add other old shadcn props if you use them
+  className?: string
+  action?: React.ReactNode // Support for action elements
+  icon?: React.ReactNode   // Added icon support for icons like <CheckCircle />
 }
 
-export const toast = ({ title, description, variant, ...props }: ToastProps) => {
-  // Map 'destructive' variant to Sonner's error method
-  if (variant === "destructive") {
-    return sonnerToast.error(title, {
-      description: description,
-      ...props,
-    })
+export const toast = ({ title, description, variant, className, action, icon, ...props }: ToastProps) => {
+  const options = {
+    description: description,
+    className: className,
+    icon: icon, // Sonner uses this to place elements next to the title
+    action: action as any, // Cast to any because Sonner expects a specific object structure for its own buttons
+    ...props,
   }
 
-  // Default toast
-  return sonnerToast(title, {
-    description: description,
-    ...props,
-  })
+  if (variant === "destructive") {
+    return sonnerToast.error(title, options)
+  }
+
+  return sonnerToast(title, options)
 }
 
 export function useToast() {

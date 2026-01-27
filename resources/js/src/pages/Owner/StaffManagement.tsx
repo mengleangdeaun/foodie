@@ -71,6 +71,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { 
   UserPlus, 
@@ -82,16 +84,20 @@ import {
   Wand2, 
   Pencil, 
   Trash2,
-  Filter,
   Search,
   Eye,
   EyeOff,
   Key,
   Users,
   Building,
-  MoreVertical,
-  Copy,
-  AlertCircle
+  AlertCircle,
+  User,
+  Camera,
+  Check,
+  X,
+  Power,
+  Upload,
+  RefreshCw
 } from "lucide-react";
 
 // Import your helper mapping
@@ -109,6 +115,9 @@ const OwnerStaffManagement = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [staffToDelete, setStaffToDelete] = useState<number | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [statusLoading, setStatusLoading] = useState<number | null>(null);
     
     const [formData, setFormData] = useState({
         name: '', 
@@ -116,8 +125,11 @@ const OwnerStaffManagement = () => {
         password: '', 
         branch_id: '', 
         role: 'waiter', 
-        permissions: {} as Record<string, Record<string, boolean>>
+        permissions: {} as Record<string, Record<string, boolean>>,
+        is_active: true
     });
+
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     useEffect(() => { 
         fetchData(); 
@@ -143,30 +155,81 @@ const OwnerStaffManagement = () => {
         }
     };
 
+    const getAvatarUrl = (avatar: string | null) => {
+        if (!avatar) return null;
+        if (avatar.startsWith('http')) return avatar;
+        // Assuming avatar is stored in public storage
+        return `${import.meta.env.VITE_API_BASE_URL || ''}/storage/${avatar}`;
+    };
+
+    const getUserInitials = (name: string) => {
+        return name
+            .split(' ')
+            .map(word => word[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+    };
+
     const handleOpenModal = (member: any = null) => {
+        setErrors({}); // Clear previous errors
         if (member) {
             setEditingStaff(member);
+            setAvatarPreview(getAvatarUrl(member.avatar));
+            setAvatarFile(null);
             setFormData({
-                name: member.name, 
-                email: member.email, 
+                name: member.name || '', 
+                email: member.email || '', 
                 password: '', 
                 branch_id: member.branch_id?.toString() || '', 
-                role: member.role, 
-                permissions: member.permissions || {} 
+                role: member.role || 'waiter', 
+                permissions: member.permissions || {},
+                is_active: member.is_active ?? true
             });
         } else {
             setEditingStaff(null);
+            setAvatarPreview(null);
+            setAvatarFile(null);
             setFormData({ 
                 name: '', 
                 email: '', 
                 password: '', 
                 branch_id: '', 
                 role: 'waiter', 
-                permissions: {} 
+                permissions: {},
+                is_active: true
             });
         }
         setShowPassword(false);
         setOpenDialog(true);
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type and size
+        if (!file.type.startsWith('image/')) {
+            toast({ 
+                variant: "destructive", 
+                title: "Invalid File", 
+                description: "Please select an image file (JPEG, PNG, JPG, GIF)." 
+            });
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            toast({ 
+                variant: "destructive", 
+                title: "File Too Large", 
+                description: "Image size should be less than 5MB." 
+            });
+            return;
+        }
+
+        setAvatarFile(file);
+        const objectUrl = URL.createObjectURL(file);
+        setAvatarPreview(objectUrl);
     };
 
     const applyPreset = (role: keyof typeof ROLE_PRESETS) => {
@@ -187,18 +250,75 @@ const OwnerStaffManagement = () => {
             permissions: {
                 ...prev.permissions,
                 [module]: {
-                    ...prev.permissions[module],
+                    ...prev.permissions[module] || {},
                     [action]: !prev.permissions[module]?.[action]
                 }
             }
         }));
     };
 
+    const handleStatusToggle = async (staffId: number, currentStatus: boolean) => {
+        setStatusLoading(staffId);
+        try {
+            const newStatus = !currentStatus;
+            
+            // Update status using the status endpoint
+            await api.put(`/admin/staff/${staffId}/status`, {
+                is_active: newStatus
+            });
+            
+            // Update local state
+            setStaff(prev => prev.map(staff => 
+                staff.id === staffId ? { ...staff, is_active: newStatus } : staff
+            ));
+            
+            toast({
+                title: newStatus ? "Staff Activated" : "Staff Deactivated",
+                description: newStatus 
+                    ? "Staff member is now active and can access the system"
+                    : "Staff member has been deactivated",
+                className: newStatus 
+                    ? "bg-success text-success-foreground border-success"
+                    : "bg-warning text-warning-foreground border-warning"
+            });
+        } catch (error: any) {
+            toast({ 
+                variant: "destructive", 
+                title: "Operation failed",
+                description: error.response?.data?.message || "Failed to update status. Please try again."
+            });
+        } finally {
+            setStatusLoading(null);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setErrors({});
         
-        // Basic validation
+        // Client-side validation
+        if (!formData.name.trim()) {
+            setErrors(prev => ({ ...prev, name: 'Name is required' }));
+            toast({
+                variant: "destructive",
+                title: "Validation Error",
+                description: "Name is required"
+            });
+            return;
+        }
+        
+        if (!formData.email.trim()) {
+            setErrors(prev => ({ ...prev, email: 'Email is required' }));
+            toast({
+                variant: "destructive",
+                title: "Validation Error",
+                description: "Email is required"
+            });
+            return;
+        }
+        
         if (!formData.branch_id) {
+            setErrors(prev => ({ ...prev, branch_id: 'Branch is required' }));
             toast({
                 variant: "destructive",
                 title: "Branch required",
@@ -207,23 +327,50 @@ const OwnerStaffManagement = () => {
             return;
         }
         
+        if (!editingStaff && !formData.password) {
+            setErrors(prev => ({ ...prev, password: 'Password is required for new staff' }));
+            toast({
+                variant: "destructive",
+                title: "Password required",
+                description: "Password is required for new staff members"
+            });
+            return;
+        }
+        
         setSubmitting(true);
         try {
-            const payload = {
-                ...formData,
-                branch_id: parseInt(formData.branch_id),
-                // Only include password if provided (for updates) or required (for new)
-                ...(!editingStaff || formData.password ? {} : { password: undefined })
-            };
+            // Use FormData for avatar upload
+            const formDataToSend = new FormData();
+            formDataToSend.append('name', formData.name.trim());
+            formDataToSend.append('email', formData.email.trim());
+            formDataToSend.append('branch_id', formData.branch_id);
+            formDataToSend.append('role', formData.role);
+            formDataToSend.append('is_active', formData.is_active.toString());
+            formDataToSend.append('permissions', JSON.stringify(formData.permissions));
+            
+            if (formData.password) {
+                formDataToSend.append('password', formData.password);
+            }
+            
+            // Add avatar if file is selected
+            if (avatarFile) {
+                formDataToSend.append('avatar', avatarFile);
+            }
 
             if (editingStaff) {
-                await api.put(`/admin/staff/${editingStaff.id}`, payload);
+                // Use PUT for updates
+                await api.put(`/admin/staff/${editingStaff.id}`, formDataToSend, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                });
                 toast({ 
                     title: "Staff Updated",
                     description: `${formData.name}'s account has been updated`
                 });
             } else {
-                await api.post('/admin/staff', payload);
+                // Use POST for creating new staff
+                await api.post('/admin/staff', formDataToSend, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                });
                 toast({ 
                     title: "Staff Created",
                     description: `${formData.name} has been added to the team`
@@ -232,11 +379,35 @@ const OwnerStaffManagement = () => {
             setOpenDialog(false);
             fetchData();
         } catch (error: any) {
-            toast({ 
-                variant: "destructive", 
-                title: "Operation failed",
-                description: error.response?.data?.message || "Please check your input and try again"
-            });
+            console.error('Submit error:', error);
+            
+            // Handle validation errors from server
+            if (error.response?.data?.errors) {
+                const serverErrors = error.response.data.errors;
+                setErrors(serverErrors);
+                
+                // Show first error in toast
+                const firstError = Object.values(serverErrors)[0];
+                if (Array.isArray(firstError)) {
+                    toast({ 
+                        variant: "destructive", 
+                        title: "Validation Error",
+                        description: firstError[0]
+                    });
+                } else if (typeof firstError === 'string') {
+                    toast({ 
+                        variant: "destructive", 
+                        title: "Validation Error",
+                        description: firstError
+                    });
+                }
+            } else {
+                toast({ 
+                    variant: "destructive", 
+                    title: "Operation failed",
+                    description: error.response?.data?.message || "Please check your input and try again"
+                });
+            }
         } finally { 
             setSubmitting(false); 
         }
@@ -279,11 +450,12 @@ const OwnerStaffManagement = () => {
     const filteredStaff = staff.filter(member =>
         member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.role.toLowerCase().includes(searchQuery.toLowerCase())
+        member.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (member.branch?.branch_name || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
-        <div className="space-y-6 ">
+        <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -291,16 +463,27 @@ const OwnerStaffManagement = () => {
                         Staff Management
                     </h1>
                     <p className="text-muted-foreground">
-                        Manage your team members and their access permissions
+                        Manage your team members, their access permissions and status
                     </p>
                 </div>
-                <Button 
-                    onClick={() => handleOpenModal()}
-                    className="gap-2"
-                >
-                    <UserPlus className="h-4 w-4" />
-                    Add Staff
-                </Button>
+                <div className="flex items-center gap-3">
+                    <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={fetchData}
+                        disabled={loading}
+                    >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                    <Button 
+                        onClick={() => handleOpenModal()}
+                        className="gap-2"
+                    >
+                        <UserPlus className="h-4 w-4" />
+                        Add Staff
+                    </Button>
+                </div>
             </div>
 
             <Card>
@@ -309,7 +492,14 @@ const OwnerStaffManagement = () => {
                         <div>
                             <CardTitle>Team Members</CardTitle>
                             <CardDescription>
-                                {staff.length} staff member{staff.length !== 1 ? 's' : ''} in your system
+                                {staff.length} staff member{staff.length !== 1 ? 's' : ''} in your system • 
+                                <span className="text-green-600 dark:text-green-400 ml-1">
+                                    {staff.filter(s => s.is_active).length} active
+                                </span>
+                                <span className="text-muted-foreground mx-1">•</span>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                    {staff.filter(s => !s.is_active).length} inactive
+                                </span>
                             </CardDescription>
                         </div>
                         <div className="relative w-full sm:w-auto">
@@ -364,21 +554,29 @@ const OwnerStaffManagement = () => {
                                         <TableHead>Staff Member</TableHead>
                                         <TableHead>Role & Permissions</TableHead>
                                         <TableHead>Branch</TableHead>
+                                        <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {filteredStaff.map((user: any) => (
-                                        <TableRow key={user.id}>
+                                        <TableRow key={user.id} className={!user.is_active ? "bg-muted/30" : ""}>
                                             <TableCell>
                                                 <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                                        <span className="font-semibold text-primary">
-                                                            {user.name.charAt(0).toUpperCase()}
-                                                        </span>
-                                                    </div>
+                                                    <Avatar className="h-10 w-10 border">
+                                                        <AvatarImage 
+                                                            src={getAvatarUrl(user.avatar) || undefined} 
+                                                            alt={user.name}
+                                                            className="object-cover"
+                                                        />
+                                                        <AvatarFallback className="bg-primary/10 text-primary">
+                                                            {getUserInitials(user.name)}
+                                                        </AvatarFallback>
+                                                    </Avatar>
                                                     <div>
-                                                        <div className="font-medium">{user.name}</div>
+                                                        <div className="font-medium flex items-center gap-2">
+                                                            {user.name}
+                                                        </div>
                                                         <div className="text-sm text-muted-foreground flex items-center gap-1">
                                                             <Mail className="h-3 w-3" />
                                                             {user.email}
@@ -404,9 +602,39 @@ const OwnerStaffManagement = () => {
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant="outline" className="gap-1">
-                                                    <Store className="h-3 w-3" />
+                                                    <Building className="h-3 w-3" />
                                                     {user.branch?.branch_name || 'No Branch'}
                                                 </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex items-center space-x-2">
+                                                        <Switch
+                                                            checked={user.is_active}
+                                                            onCheckedChange={() => handleStatusToggle(user.id, user.is_active)}
+                                                            disabled={statusLoading === user.id}
+                                                        />
+                                                        {statusLoading === user.id && (
+                                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                                        )}
+                                                    </div>
+                                                    <Badge
+                                                        variant={user.is_active ? "success" : "secondary"}
+                                                        className="gap-1"
+                                                    >
+                                                        {user.is_active ? (
+                                                            <>
+                                                                <Check className="h-3 w-3" />
+                                                                Active
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <X className="h-3 w-3" />
+                                                                Inactive
+                                                            </>
+                                                        )}
+                                                    </Badge>
+                                                </div>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">
@@ -417,6 +645,7 @@ const OwnerStaffManagement = () => {
                                                                     variant="ghost" 
                                                                     size="icon"
                                                                     onClick={() => handleOpenModal(user)}
+                                                                    disabled={statusLoading === user.id}
                                                                 >
                                                                     <Pencil className="h-4 w-4" />
                                                                 </Button>
@@ -437,6 +666,7 @@ const OwnerStaffManagement = () => {
                                                                         setStaffToDelete(user.id);
                                                                         setDeleteDialogOpen(true);
                                                                     }}
+                                                                    disabled={statusLoading === user.id}
                                                                 >
                                                                     <Trash2 className="h-4 w-4" />
                                                                 </Button>
@@ -480,118 +710,228 @@ const OwnerStaffManagement = () => {
                             </TabsList>
                             
                             <TabsContent value="basic" className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="name">Full Name *</Label>
-                                        <Input 
-                                            id="name"
-                                            required 
-                                            value={formData.name} 
-                                            onChange={e => setFormData({...formData, name: e.target.value})}
-                                            placeholder="Sok Sabay"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="email">Email Address *</Label>
-                                        <Input 
-                                            id="email"
-                                            type="email" 
-                                            required 
-                                            value={formData.email} 
-                                            onChange={e => setFormData({...formData, email: e.target.value})}
-                                            placeholder="soksabay@example.com"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="password">
-                                            Password {editingStaff && "(Leave blank to keep current)"}
-                                        </Label>
-                                        <div className="relative">
-                                            <Input 
-                                                id="password"
-                                                type={showPassword ? "text" : "password"}
-                                                required={!editingStaff}
-                                                value={formData.password} 
-                                                onChange={e => setFormData({...formData, password: e.target.value})}
-                                                placeholder={editingStaff ? "••••••••" : "Enter password"}
+                                <div className="flex flex-col md:flex-row gap-6">
+                                    {/* Avatar Upload */}
+                                    <div className="md:w-1/3 flex flex-col items-center space-y-4">
+                                        <div className="relative group">
+                                            <Avatar className="h-32 w-32 border-4 border-background shadow-lg cursor-pointer">
+                                                <AvatarImage 
+                                                    src={avatarPreview || undefined} 
+                                                    alt="Avatar preview"
+                                                    className="object-cover"
+                                                />
+                                                <AvatarFallback className="text-2xl bg-primary/10">
+                                                    {formData.name ? getUserInitials(formData.name) : <User className="h-12 w-12" />}
+                                                </AvatarFallback>
+                                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                                                    <Camera className="h-8 w-8 text-white" />
+                                                </div>
+                                            </Avatar>
+                                            <input
+                                                type="file"
+                                                id="avatar-upload"
+                                                className="hidden"
+                                                accept="image/*"
+                                                onChange={handleFileChange}
                                             />
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
+                                        </div>
+                                        <div className="text-center space-y-2">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => document.getElementById('avatar-upload')?.click()}
+                                                className="gap-2"
+                                            >
+                                                <Upload className="h-4 w-4" />
+                                                Upload Photo
+                                            </Button>
+                                            <p className="text-xs text-muted-foreground">
+                                                JPG, PNG or GIF. Max 5MB
+                                            </p>
+                                            {avatarPreview && (
                                                 <Button
                                                     type="button"
                                                     variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6"
-                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setAvatarPreview(null);
+                                                        setAvatarFile(null);
+                                                    }}
+                                                    className="text-destructive"
                                                 >
-                                                    {showPassword ? (
-                                                        <EyeOff className="h-3 w-3" />
-                                                    ) : (
-                                                        <Eye className="h-3 w-3" />
-                                                    )}
+                                                    Remove Photo
                                                 </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6"
-                                                    onClick={generatePassword}
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Form Fields */}
+                                    <div className="md:w-2/3 space-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="name">Full Name *</Label>
+                                                <Input 
+                                                    id="name"
+                                                    required 
+                                                    value={formData.name} 
+                                                    onChange={(e) => {
+                                                        setFormData({...formData, name: e.target.value});
+                                                        if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
+                                                    }}
+                                                    placeholder="Sok Sabay"
+                                                    className={errors.name ? "border-destructive" : ""}
+                                                />
+                                                {errors.name && (
+                                                    <p className="text-sm text-destructive">{errors.name}</p>
+                                                )}
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="email">Email Address *</Label>
+                                                <Input 
+                                                    id="email"
+                                                    type="email" 
+                                                    required 
+                                                    value={formData.email} 
+                                                    onChange={(e) => {
+                                                        setFormData({...formData, email: e.target.value});
+                                                        if (errors.email) setErrors(prev => ({ ...prev, email: '' }));
+                                                    }}
+                                                    placeholder="soksabay@example.com"
+                                                    className={errors.email ? "border-destructive" : ""}
+                                                />
+                                                {errors.email && (
+                                                    <p className="text-sm text-destructive">{errors.email}</p>
+                                                )}
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="password">
+                                                    Password {editingStaff && "(Leave blank to keep current)"}
+                                                </Label>
+                                                <div className="relative">
+                                                    <Input 
+                                                        id="password"
+                                                        type={showPassword ? "text" : "password"}
+                                                        required={!editingStaff}
+                                                        value={formData.password} 
+                                                        onChange={(e) => {
+                                                            setFormData({...formData, password: e.target.value});
+                                                            if (errors.password) setErrors(prev => ({ ...prev, password: '' }));
+                                                        }}
+                                                        placeholder={editingStaff ? "••••••••" : "Enter password"}
+                                                        className={errors.password ? "border-destructive" : ""}
+                                                    />
+                                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6"
+                                                            onClick={() => setShowPassword(!showPassword)}
+                                                        >
+                                                            {showPassword ? (
+                                                                <EyeOff className="h-3 w-3" />
+                                                            ) : (
+                                                                <Eye className="h-3 w-3" />
+                                                            )}
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6"
+                                                            onClick={generatePassword}
+                                                        >
+                                                            <Key className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                                {errors.password && (
+                                                    <p className="text-sm text-destructive">{errors.password}</p>
+                                                )}
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="branch">Branch Assignment *</Label>
+                                                <Select 
+                                                    value={formData.branch_id} 
+                                                    onValueChange={(v) => {
+                                                        setFormData({...formData, branch_id: v});
+                                                        if (errors.branch_id) setErrors(prev => ({ ...prev, branch_id: '' }));
+                                                    }}
                                                 >
-                                                    <Key className="h-3 w-3" />
-                                                </Button>
+                                                    <SelectTrigger 
+                                                        id="branch" 
+                                                        className={errors.branch_id ? "border-destructive" : ""}
+                                                    >
+                                                        <SelectValue placeholder="Select Branch" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {branches.map(b => (
+                                                            <SelectItem 
+                                                                key={b.id} 
+                                                                value={b.id.toString()}
+                                                            >
+                                                                <div className="flex items-center gap-2">
+                                                                    <Building className="h-3 w-3" />
+                                                                    {b.branch_name}
+                                                                </div>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                {errors.branch_id && (
+                                                    <p className="text-sm text-destructive">{errors.branch_id}</p>
+                                                )}
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="branch">Branch Assignment *</Label>
-                                        <Select 
-                                            value={formData.branch_id} 
-                                            onValueChange={v => setFormData({...formData, branch_id: v})}
-                                        >
-                                            <SelectTrigger id="branch">
-                                                <SelectValue placeholder="Select Branch" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {branches.map(b => (
-                                                    <SelectItem 
-                                                        key={b.id} 
-                                                        value={b.id.toString()}
-                                                    >
-                                                        <div className="flex items-center gap-2">
-                                                            <Building className="h-3 w-3" />
-                                                            {b.branch_name}
-                                                        </div>
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
 
-                                <Separator />
+                                        <Separator />
 
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-0.5">
-                                            <Label className="text-base font-medium">Quick Role Presets</Label>
-                                            <p className="text-sm text-muted-foreground">
-                                                Apply predefined permission sets for common roles
-                                            </p>
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="space-y-0.5">
+                                                    <Label className="text-base font-medium flex items-center gap-2">
+                                                        <Power className="h-4 w-4" />
+                                                        Account Status
+                                                    </Label>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Control whether this staff member can access the system
+                                                    </p>
+                                                </div>
+                                                <Switch
+                                                    checked={formData.is_active}
+                                                    onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
+                                                />
+                                            </div>
                                         </div>
-                                        <Wand2 className="h-5 w-5 text-primary" />
-                                    </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {Object.keys(ROLE_PRESETS).map(role => (
-                                            <Button 
-                                                key={role} 
-                                                type="button" 
-                                                variant="outline" 
-                                                size="sm"
-                                                onClick={() => applyPreset(role as any)}
-                                                className="capitalize"
-                                            >
-                                                {role.replace('_', ' ')}
-                                            </Button>
-                                        ))}
+
+                                        <Separator />
+
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="space-y-0.5">
+                                                    <Label className="text-base font-medium">Quick Role Presets</Label>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Apply predefined permission sets for common roles
+                                                    </p>
+                                                </div>
+                                                <Wand2 className="h-5 w-5 text-primary" />
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {Object.keys(ROLE_PRESETS).map(role => (
+                                                    <Button 
+                                                        key={role} 
+                                                        type="button" 
+                                                        variant="outline" 
+                                                        size="sm"
+                                                        onClick={() => applyPreset(role as any)}
+                                                        className="capitalize"
+                                                    >
+                                                        {role.replace('_', ' ')}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </TabsContent>
@@ -653,15 +993,27 @@ const OwnerStaffManagement = () => {
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
+                                        <div className="flex items-center gap-4">
+                                            <Avatar className="h-16 w-16">
+                                                <AvatarImage src={avatarPreview || undefined} />
+                                                <AvatarFallback>
+                                                    {getUserInitials(formData.name)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-bold text-lg">{formData.name || 'Not set'}</h3>
+                                                    <Badge variant={formData.is_active ? "success" : "secondary"}>
+                                                        {formData.is_active ? 'Active' : 'Inactive'}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-muted-foreground">{formData.email || 'Not set'}</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <Separator />
+                                        
                                         <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <Label className="text-sm text-muted-foreground">Name</Label>
-                                                <p className="font-medium">{formData.name || 'Not set'}</p>
-                                            </div>
-                                            <div>
-                                                <Label className="text-sm text-muted-foreground">Email</Label>
-                                                <p className="font-medium">{formData.email || 'Not set'}</p>
-                                            </div>
                                             <div>
                                                 <Label className="text-sm text-muted-foreground">Role</Label>
                                                 <p className="font-medium capitalize">{formData.role}</p>
@@ -673,7 +1025,9 @@ const OwnerStaffManagement = () => {
                                                 </p>
                                             </div>
                                         </div>
+                                        
                                         <Separator />
+                                        
                                         <div>
                                             <Label className="text-sm text-muted-foreground mb-2">Permissions Summary</Label>
                                             <div className="flex flex-wrap gap-2">

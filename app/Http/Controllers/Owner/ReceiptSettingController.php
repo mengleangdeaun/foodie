@@ -54,14 +54,11 @@ class ReceiptSettingController extends Controller
             'store_name' => 'nullable|string|max:255',
             'header_text' => 'nullable|string',
             'footer_text' => 'nullable|string',
-'primary_color' => [
-    'nullable',
-    'string',
-    'regex:#^\#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$#'
-],
-
-
-
+            'primary_color' => [
+                'nullable',
+                'string',
+                'regex:#^\#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$#'
+            ],
             'font_size_base' => 'nullable|integer|min:10|max:20',
             'font_family' => 'nullable|string',
             'logo_size' => 'nullable|integer|min:40|max:180',

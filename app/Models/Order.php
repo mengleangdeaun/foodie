@@ -11,28 +11,28 @@ class Order extends Model
 {
     use HasFactory;
 
-protected $fillable = [
-    'order_code',
-    'branch_id',
-    'user_id',
-    'restaurant_table_id',
-    'order_type',
-    'delivery_partner_id',
-    'status',
-    'paid_at',
-    'subtotal',
-    'item_discount_total',
-    'order_level_discount',
-    'delivery_partner_discount',
-    'order_discount_amount', // Changed from 'discount_amount'
-    'tax_rate',              // Added
-    'tax_amount',
-    'cooking_started_at',
-    'ready_at',
-    'actual_prep_duration', 
-    'created_by',
-    'updated_by'
-];
+    protected $fillable = [
+        'order_code',
+        'branch_id',
+        'user_id',
+        'restaurant_table_id',
+        'order_type',
+        'delivery_partner_id',
+        'status',
+        'paid_at',
+        'subtotal',
+        'item_discount_total',
+        'order_level_discount',
+        'delivery_partner_discount',
+        'order_discount_amount', 
+        'tax_rate',              
+        'tax_amount',
+        'cooking_started_at',
+        'ready_at',
+        'actual_prep_duration',
+        'created_by',
+        'updated_by'
+    ];
 
     protected $casts = [
         'created_at' => 'datetime',
@@ -45,11 +45,15 @@ protected $fillable = [
         'tax_amount' => 'decimal:2',
     ];
 
-    public function creator() {
+    protected $appends = ['daily_sequence'];
+
+    public function creator()
+    {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function updater() {
+    public function updater()
+    {
         return $this->belongsTo(User::class, 'updated_by');
     }
 
@@ -96,16 +100,17 @@ protected $fillable = [
 
     public function deliveryPartner()
     {
-    // Ensure 'delivery_partner_id' matches your column name
+        // Ensure 'delivery_partner_id' matches your column name
         return $this->belongsTo(DeliveryPartner::class, 'delivery_partner_id');
     }
 
     // In Order.php Model
-public function getDailySequenceAttribute() {
-    return Order::where('branch_id', $this->branch_id)
-        ->whereDate('created_at', $this->created_at->toDateString())
-        ->where('id', '<=', $this->id)
-        ->count();
-}
+    public function getDailySequenceAttribute()
+    {
+        return Order::where('branch_id', $this->branch_id)
+            ->whereDate('created_at', $this->created_at->toDateString())
+            ->where('id', '<=', $this->id)
+            ->count();
+    }
 
 }
