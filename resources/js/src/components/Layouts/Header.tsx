@@ -105,46 +105,50 @@ const Header = () => {
 
                     <div className="sm:flex-1 ltr:sm:ml-0 ltr:ml-auto sm:rtl:mr-0 rtl:mr-auto flex items-center justify-end space-x-1.5 lg:space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
                         <div className="flex items-center gap-2">
-                            {user?.role === 'owner' ? (
-                                <div className="dropdown shrink-0">
-                                    <Dropdown
-                                        offset={[10, 0]}
-                                        placement={isRtl ? 'bottom-start' : 'bottom-end'}
-                                        btnClassName="flex items-center gap-2 p-2 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"
-                                        button={
-                                            <>
-                                                <span className="text-xs font-black uppercase tracking-tighter hidden md:block">
-                                                    {user?.branch?.branch_name || 'Select Branch'}
-                                                </span>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <path d="M7 17l5-5 5 5M7 7l5 5 5-5" />
-                                                </svg>
-                                            </>
-                                        }
-                                    >
-                                        <ul className=" text-dark dark:text-white-dark w-[200px] font-semibold">
-                                            {branches.map((b) => (
-                                                <li key={b.id}>
-                                                    <button
-                                                        type="button"
-                                                        className={`flex items-center w-full px-4 py-2 hover:bg-primary/10 ${user?.branch_id === b.id ? 'text-primary' : ''}`}
-                                                        onClick={() => switchBranch(b.id)}
-                                                    >
-                                                        <span className="ltr:mr-2 rtl:ml-2 h-2 w-2 rounded-full" style={{ backgroundColor: b.primary_color }} />
-                                                        {b.branch_name}
-                                                    </button>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </Dropdown>
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-2 p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
-                                    <Store size={16} />
-                                    <span className="text-xs font-black uppercase tracking-tighter hidden md:block">
-                                        {user?.branch?.branch_name || 'No Branch'}
-                                    </span>
-                                </div>
+                            {(role !== 'super_admin') && (
+                                <>
+                                    {user?.role === 'owner' ? (
+                                        <div className="dropdown shrink-0">
+                                            <Dropdown
+                                                offset={[10, 0]}
+                                                placement={isRtl ? 'bottom-start' : 'bottom-end'}
+                                                btnClassName="flex items-center gap-2 p-2 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all"
+                                                button={
+                                                    <>
+                                                        <span className="text-xs font-black uppercase tracking-tighter hidden md:block">
+                                                            {user?.branch?.branch_name || 'Select Branch'}
+                                                        </span>
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                            <path d="M7 17l5-5 5 5M7 7l5 5 5-5" />
+                                                        </svg>
+                                                    </>
+                                                }
+                                            >
+                                                <ul className=" text-dark dark:text-white-dark w-[200px] font-semibold">
+                                                    {branches.map((b) => (
+                                                        <li key={b.id}>
+                                                            <button
+                                                                type="button"
+                                                                className={`flex items-center w-full px-4 py-2 hover:bg-primary/10 ${user?.branch_id === b.id ? 'text-primary' : ''}`}
+                                                                onClick={() => switchBranch(b.id)}
+                                                            >
+                                                                <span className="ltr:mr-2 rtl:ml-2 h-2 w-2 rounded-full" style={{ backgroundColor: b.primary_color }} />
+                                                                {b.branch_name}
+                                                            </button>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </Dropdown>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                                            <Store size={16} />
+                                            <span className="text-xs font-black uppercase tracking-tighter hidden md:block">
+                                                {user?.branch?.branch_name || 'No Branch'}
+                                            </span>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                         <div>
@@ -266,8 +270,42 @@ const Header = () => {
                 {/* horizontal menu */}
                 <ul className="horizontal-menu hidden py-1.5 font-semibold px-6 lg:space-x-1.5 xl:space-x-8 rtl:space-x-reverse bg-white border-t border-[#ebedf2] dark:border-[#191e3a] dark:bg-black text-black dark:text-white-dark">
 
+                    {/* SaaS Management (Super Admin) */}
+                    {role === 'super_admin' && (
+                        <li className="menu nav-item relative">
+                            <button type="button" className="nav-link">
+                                <div className="flex items-center">
+                                    <LayoutDashboard size={20} className="shrink-0" />
+                                    <span className="px-1">{t('SaaS Management')}</span>
+                                </div>
+                                <div className="right_arrow">
+                                    <svg className="rotate-90" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M9 5L15 12L9 19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </div>
+                            </button>
+                            <ul className="sub-menu">
+                                <li>
+                                    <NavLink to="/super-admin/dashboard">{t('Dashboard')}</NavLink>
+                                </li>
+                                <li>
+                                    <NavLink to="/super-admin/onboard-restaurant">{t('Onboard Restaurant')}</NavLink>
+                                </li>
+                                <li>
+                                    <NavLink to="/super-admin/restaurants">{t('Manage Restaurants')}</NavLink>
+                                </li>
+                                <li>
+                                    <NavLink to="/super-admin/settings/landing-page">{t('Landing Page')}</NavLink>
+                                </li>
+                                <li>
+                                    <NavLink to="/super-admin/contact-messages">{t('Contact Messages')}</NavLink>
+                                </li>
+                            </ul>
+                        </li>
+                    )}
+
                     {/* Operations Group */}
-                    {(role === 'owner' || canDo('orders', 'read')) && (
+                    {(role !== 'super_admin' && (role === 'owner' || canDo('orders', 'read'))) && (
                         <li className="menu nav-item relative">
                             <button type="button" className="nav-link">
                                 <div className="flex items-center">
@@ -300,7 +338,7 @@ const Header = () => {
                     )}
 
                     {/* Menu Management Group */}
-                    {(role === 'owner' || canDo('menu', 'read')) && (
+                    {(role !== 'super_admin' && (role === 'owner' || canDo('menu', 'read'))) && (
                         <li className="menu nav-item relative">
                             <button type="button" className="nav-link">
                                 <div className="flex items-center">
@@ -368,7 +406,7 @@ const Header = () => {
                     )}
 
                     {/* Table Control */}
-                    {(role === 'owner' || canDo('tables', 'read')) && (
+                    {(role !== 'super_admin' && (role === 'owner' || canDo('tables', 'read'))) && (
                         <li className="menu nav-item relative">
                             <button type="button" className="nav-link">
                                 <div className="flex items-center">
