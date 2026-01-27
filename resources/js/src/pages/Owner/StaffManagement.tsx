@@ -1,103 +1,103 @@
 import { useState, useEffect } from 'react';
 import api from '@/util/api';
-import { 
-  Button 
+import {
+    Button
 } from "@/components/ui/button";
-import { 
-  Input 
+import {
+    Input
 } from "@/components/ui/input";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle
 } from "@/components/ui/card";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow
 } from "@/components/ui/table";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
 } from "@/components/ui/dialog";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
 } from "@/components/ui/select";
-import { 
-  Badge 
+import {
+    Badge
 } from "@/components/ui/badge";
-import { 
-  Checkbox 
+import {
+    Checkbox
 } from "@/components/ui/checkbox";
-import { 
-  Label 
+import {
+    Label
 } from "@/components/ui/label";
-import { 
-  Separator 
+import {
+    Separator
 } from "@/components/ui/separator";
-import { 
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
+import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
 } from "@/components/ui/tabs";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  UserPlus, 
-  ShieldCheck, 
-  Store, 
-  Mail, 
-  Loader2, 
-  Lock, 
-  Wand2, 
-  Pencil, 
-  Trash2,
-  Search,
-  Eye,
-  EyeOff,
-  Key,
-  Users,
-  Building,
-  AlertCircle,
-  User,
-  Camera,
-  Check,
-  X,
-  Power,
-  Upload,
-  RefreshCw
+import {
+    UserPlus,
+    ShieldCheck,
+    Store,
+    Mail,
+    Loader2,
+    Lock,
+    Wand2,
+    Pencil,
+    Trash2,
+    Search,
+    Eye,
+    EyeOff,
+    Key,
+    Users,
+    Building,
+    AlertCircle,
+    User,
+    Camera,
+    Check,
+    X,
+    Power,
+    Upload,
+    RefreshCw
 } from "lucide-react";
 
 // Import your helper mapping
@@ -118,28 +118,28 @@ const OwnerStaffManagement = () => {
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [statusLoading, setStatusLoading] = useState<number | null>(null);
-    
+
     const [formData, setFormData] = useState({
-        name: '', 
-        email: '', 
-        password: '', 
-        branch_id: '', 
-        role: 'waiter', 
+        name: '',
+        email: '',
+        password: '',
+        branch_id: '',
+        role: 'waiter',
         permissions: {} as Record<string, Record<string, boolean>>,
         is_active: true
     });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    useEffect(() => { 
-        fetchData(); 
+    useEffect(() => {
+        fetchData();
     }, []);
 
     const fetchData = async () => {
         setLoading(true);
         try {
             const [staffRes, branchRes] = await Promise.all([
-                api.get('/admin/staff'), 
+                api.get('/admin/staff'),
                 api.get('/admin/branches')
             ]);
             setStaff(Array.isArray(staffRes.data) ? staffRes.data : (staffRes.data.data || []));
@@ -150,8 +150,8 @@ const OwnerStaffManagement = () => {
                 title: "Failed to load data",
                 description: "Please try again later"
             });
-        } finally { 
-            setLoading(false); 
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -178,11 +178,11 @@ const OwnerStaffManagement = () => {
             setAvatarPreview(getAvatarUrl(member.avatar));
             setAvatarFile(null);
             setFormData({
-                name: member.name || '', 
-                email: member.email || '', 
-                password: '', 
-                branch_id: member.branch_id?.toString() || '', 
-                role: member.role || 'waiter', 
+                name: member.name || '',
+                email: member.email || '',
+                password: '',
+                branch_id: member.branch_id?.toString() || '',
+                role: member.role || 'waiter',
                 permissions: member.permissions || {},
                 is_active: member.is_active ?? true
             });
@@ -190,12 +190,12 @@ const OwnerStaffManagement = () => {
             setEditingStaff(null);
             setAvatarPreview(null);
             setAvatarFile(null);
-            setFormData({ 
-                name: '', 
-                email: '', 
-                password: '', 
-                branch_id: '', 
-                role: 'waiter', 
+            setFormData({
+                name: '',
+                email: '',
+                password: '',
+                branch_id: '',
+                role: 'waiter',
                 permissions: {},
                 is_active: true
             });
@@ -210,19 +210,19 @@ const OwnerStaffManagement = () => {
 
         // Validate file type and size
         if (!file.type.startsWith('image/')) {
-            toast({ 
-                variant: "destructive", 
-                title: "Invalid File", 
-                description: "Please select an image file (JPEG, PNG, JPG, GIF)." 
+            toast({
+                variant: "destructive",
+                title: "Invalid File",
+                description: "Please select an image file (JPEG, PNG, JPG, GIF)."
             });
             return;
         }
 
         if (file.size > 5 * 1024 * 1024) { // 5MB limit
-            toast({ 
-                variant: "destructive", 
-                title: "File Too Large", 
-                description: "Image size should be less than 5MB." 
+            toast({
+                variant: "destructive",
+                title: "File Too Large",
+                description: "Image size should be less than 5MB."
             });
             return;
         }
@@ -238,9 +238,9 @@ const OwnerStaffManagement = () => {
             role: role,
             permissions: ROLE_PRESETS[role]
         }));
-        toast({ 
-            title: "Template Applied", 
-            description: `Permissions set for ${role} role` 
+        toast({
+            title: "Template Applied",
+            description: `Permissions set for ${role} role`
         });
     };
 
@@ -261,29 +261,29 @@ const OwnerStaffManagement = () => {
         setStatusLoading(staffId);
         try {
             const newStatus = !currentStatus;
-            
+
             // Update status using the status endpoint
             await api.put(`/admin/staff/${staffId}/status`, {
                 is_active: newStatus
             });
-            
+
             // Update local state
-            setStaff(prev => prev.map(staff => 
+            setStaff(prev => prev.map(staff =>
                 staff.id === staffId ? { ...staff, is_active: newStatus } : staff
             ));
-            
+
             toast({
                 title: newStatus ? "Staff Activated" : "Staff Deactivated",
-                description: newStatus 
+                description: newStatus
                     ? "Staff member is now active and can access the system"
                     : "Staff member has been deactivated",
-                className: newStatus 
+                className: newStatus
                     ? "bg-success text-success-foreground border-success"
                     : "bg-warning text-warning-foreground border-warning"
             });
         } catch (error: any) {
-            toast({ 
-                variant: "destructive", 
+            toast({
+                variant: "destructive",
                 title: "Operation failed",
                 description: error.response?.data?.message || "Failed to update status. Please try again."
             });
@@ -295,7 +295,7 @@ const OwnerStaffManagement = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrors({});
-        
+
         // Client-side validation
         if (!formData.name.trim()) {
             setErrors(prev => ({ ...prev, name: 'Name is required' }));
@@ -306,7 +306,7 @@ const OwnerStaffManagement = () => {
             });
             return;
         }
-        
+
         if (!formData.email.trim()) {
             setErrors(prev => ({ ...prev, email: 'Email is required' }));
             toast({
@@ -316,7 +316,7 @@ const OwnerStaffManagement = () => {
             });
             return;
         }
-        
+
         if (!formData.branch_id) {
             setErrors(prev => ({ ...prev, branch_id: 'Branch is required' }));
             toast({
@@ -326,7 +326,7 @@ const OwnerStaffManagement = () => {
             });
             return;
         }
-        
+
         if (!editingStaff && !formData.password) {
             setErrors(prev => ({ ...prev, password: 'Password is required for new staff' }));
             toast({
@@ -336,7 +336,7 @@ const OwnerStaffManagement = () => {
             });
             return;
         }
-        
+
         setSubmitting(true);
         try {
             // Use FormData for avatar upload
@@ -347,22 +347,23 @@ const OwnerStaffManagement = () => {
             formDataToSend.append('role', formData.role);
             formDataToSend.append('is_active', formData.is_active.toString());
             formDataToSend.append('permissions', JSON.stringify(formData.permissions));
-            
+
             if (formData.password) {
                 formDataToSend.append('password', formData.password);
             }
-            
+
             // Add avatar if file is selected
             if (avatarFile) {
                 formDataToSend.append('avatar', avatarFile);
             }
 
             if (editingStaff) {
-                // Use PUT for updates
-                await api.put(`/admin/staff/${editingStaff.id}`, formDataToSend, {
+                // Use POST with _method="PUT" for updates to support FormData/file uploads
+                formDataToSend.append('_method', 'PUT');
+                await api.post(`/admin/staff/${editingStaff.id}`, formDataToSend, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                 });
-                toast({ 
+                toast({
                     title: "Staff Updated",
                     description: `${formData.name}'s account has been updated`
                 });
@@ -371,7 +372,7 @@ const OwnerStaffManagement = () => {
                 await api.post('/admin/staff', formDataToSend, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                 });
-                toast({ 
+                toast({
                     title: "Staff Created",
                     description: `${formData.name} has been added to the team`
                 });
@@ -380,36 +381,36 @@ const OwnerStaffManagement = () => {
             fetchData();
         } catch (error: any) {
             console.error('Submit error:', error);
-            
+
             // Handle validation errors from server
             if (error.response?.data?.errors) {
                 const serverErrors = error.response.data.errors;
                 setErrors(serverErrors);
-                
+
                 // Show first error in toast
                 const firstError = Object.values(serverErrors)[0];
                 if (Array.isArray(firstError)) {
-                    toast({ 
-                        variant: "destructive", 
+                    toast({
+                        variant: "destructive",
                         title: "Validation Error",
                         description: firstError[0]
                     });
                 } else if (typeof firstError === 'string') {
-                    toast({ 
-                        variant: "destructive", 
+                    toast({
+                        variant: "destructive",
                         title: "Validation Error",
                         description: firstError
                     });
                 }
             } else {
-                toast({ 
-                    variant: "destructive", 
+                toast({
+                    variant: "destructive",
                     title: "Operation failed",
                     description: error.response?.data?.message || "Please check your input and try again"
                 });
             }
-        } finally { 
-            setSubmitting(false); 
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -417,17 +418,17 @@ const OwnerStaffManagement = () => {
         if (!staffToDelete) return;
         try {
             await api.delete(`/admin/staff/${staffToDelete}`);
-            toast({ 
+            toast({
                 title: "Staff Removed",
                 description: "Staff member has been deleted from the system"
             });
             fetchData();
-        } catch (error) { 
-            toast({ 
-                variant: "destructive", 
+        } catch (error) {
+            toast({
+                variant: "destructive",
                 title: "Delete failed",
                 description: "Unable to delete staff member. Please try again."
-            }); 
+            });
         } finally {
             setDeleteDialogOpen(false);
             setStaffToDelete(null);
@@ -467,8 +468,8 @@ const OwnerStaffManagement = () => {
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button 
-                        variant="outline" 
+                    <Button
+                        variant="outline"
                         size="sm"
                         onClick={fetchData}
                         disabled={loading}
@@ -476,7 +477,7 @@ const OwnerStaffManagement = () => {
                         <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>
-                    <Button 
+                    <Button
                         onClick={() => handleOpenModal()}
                         className="gap-2"
                     >
@@ -492,7 +493,7 @@ const OwnerStaffManagement = () => {
                         <div>
                             <CardTitle>Team Members</CardTitle>
                             <CardDescription>
-                                {staff.length} staff member{staff.length !== 1 ? 's' : ''} in your system • 
+                                {staff.length} staff member{staff.length !== 1 ? 's' : ''} in your system •
                                 <span className="text-green-600 dark:text-green-400 ml-1">
                                     {staff.filter(s => s.is_active).length} active
                                 </span>
@@ -534,7 +535,7 @@ const OwnerStaffManagement = () => {
                                 {searchQuery ? 'No matching staff' : 'No staff members yet'}
                             </h3>
                             <p className="text-muted-foreground mb-6">
-                                {searchQuery 
+                                {searchQuery
                                     ? 'Try adjusting your search terms'
                                     : 'Start building your team by adding the first staff member'
                                 }
@@ -564,8 +565,8 @@ const OwnerStaffManagement = () => {
                                             <TableCell>
                                                 <div className="flex items-center gap-3">
                                                     <Avatar className="h-10 w-10 border">
-                                                        <AvatarImage 
-                                                            src={getAvatarUrl(user.avatar) || undefined} 
+                                                        <AvatarImage
+                                                            src={getAvatarUrl(user.avatar) || undefined}
                                                             alt={user.name}
                                                             className="object-cover"
                                                         />
@@ -586,15 +587,15 @@ const OwnerStaffManagement = () => {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex flex-col gap-1">
-                                                    <Badge 
-                                                        variant="secondary" 
+                                                    <Badge
+                                                        variant="secondary"
                                                         className="w-fit capitalize"
                                                     >
                                                         {user.role}
                                                     </Badge>
                                                     <div className="text-xs text-muted-foreground flex items-center gap-1">
                                                         <Lock className="h-3 w-3" />
-                                                        {Object.keys(user.permissions || {}).reduce((acc, module) => 
+                                                        {Object.keys(user.permissions || {}).reduce((acc, module) =>
                                                             acc + Object.keys(user.permissions[module] || {}).filter(k => user.permissions[module][k]).length, 0
                                                         )} permissions
                                                     </div>
@@ -641,8 +642,8 @@ const OwnerStaffManagement = () => {
                                                     <TooltipProvider>
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
-                                                                <Button 
-                                                                    variant="ghost" 
+                                                                <Button
+                                                                    variant="ghost"
                                                                     size="icon"
                                                                     onClick={() => handleOpenModal(user)}
                                                                     disabled={statusLoading === user.id}
@@ -658,8 +659,8 @@ const OwnerStaffManagement = () => {
                                                     <TooltipProvider>
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
-                                                                <Button 
-                                                                    variant="ghost" 
+                                                                <Button
+                                                                    variant="ghost"
                                                                     size="icon"
                                                                     className="text-destructive"
                                                                     onClick={() => {
@@ -694,13 +695,13 @@ const OwnerStaffManagement = () => {
                             {editingStaff ? 'Edit Staff Member' : 'Add New Staff'}
                         </DialogTitle>
                         <DialogDescription>
-                            {editingStaff 
+                            {editingStaff
                                 ? 'Update staff information and permissions'
                                 : 'Create a new staff account with specific access rights'
                             }
                         </DialogDescription>
                     </DialogHeader>
-                    
+
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <Tabs defaultValue="basic" className="w-full">
                             <TabsList className="grid w-full grid-cols-3">
@@ -708,15 +709,15 @@ const OwnerStaffManagement = () => {
                                 <TabsTrigger value="permissions">Permissions</TabsTrigger>
                                 <TabsTrigger value="preview">Preview</TabsTrigger>
                             </TabsList>
-                            
+
                             <TabsContent value="basic" className="space-y-6">
                                 <div className="flex flex-col md:flex-row gap-6">
                                     {/* Avatar Upload */}
                                     <div className="md:w-1/3 flex flex-col items-center space-y-4">
                                         <div className="relative group">
                                             <Avatar className="h-32 w-32 border-4 border-background shadow-lg cursor-pointer">
-                                                <AvatarImage 
-                                                    src={avatarPreview || undefined} 
+                                                <AvatarImage
+                                                    src={avatarPreview || undefined}
                                                     alt="Avatar preview"
                                                     className="object-cover"
                                                 />
@@ -771,12 +772,12 @@ const OwnerStaffManagement = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <Label htmlFor="name">Full Name *</Label>
-                                                <Input 
+                                                <Input
                                                     id="name"
-                                                    required 
-                                                    value={formData.name} 
+                                                    required
+                                                    value={formData.name}
                                                     onChange={(e) => {
-                                                        setFormData({...formData, name: e.target.value});
+                                                        setFormData({ ...formData, name: e.target.value });
                                                         if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
                                                     }}
                                                     placeholder="Sok Sabay"
@@ -788,13 +789,13 @@ const OwnerStaffManagement = () => {
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="email">Email Address *</Label>
-                                                <Input 
+                                                <Input
                                                     id="email"
-                                                    type="email" 
-                                                    required 
-                                                    value={formData.email} 
+                                                    type="email"
+                                                    required
+                                                    value={formData.email}
                                                     onChange={(e) => {
-                                                        setFormData({...formData, email: e.target.value});
+                                                        setFormData({ ...formData, email: e.target.value });
                                                         if (errors.email) setErrors(prev => ({ ...prev, email: '' }));
                                                     }}
                                                     placeholder="soksabay@example.com"
@@ -809,13 +810,13 @@ const OwnerStaffManagement = () => {
                                                     Password {editingStaff && "(Leave blank to keep current)"}
                                                 </Label>
                                                 <div className="relative">
-                                                    <Input 
+                                                    <Input
                                                         id="password"
                                                         type={showPassword ? "text" : "password"}
                                                         required={!editingStaff}
-                                                        value={formData.password} 
+                                                        value={formData.password}
                                                         onChange={(e) => {
-                                                            setFormData({...formData, password: e.target.value});
+                                                            setFormData({ ...formData, password: e.target.value });
                                                             if (errors.password) setErrors(prev => ({ ...prev, password: '' }));
                                                         }}
                                                         placeholder={editingStaff ? "••••••••" : "Enter password"}
@@ -852,23 +853,23 @@ const OwnerStaffManagement = () => {
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="branch">Branch Assignment *</Label>
-                                                <Select 
-                                                    value={formData.branch_id} 
+                                                <Select
+                                                    value={formData.branch_id}
                                                     onValueChange={(v) => {
-                                                        setFormData({...formData, branch_id: v});
+                                                        setFormData({ ...formData, branch_id: v });
                                                         if (errors.branch_id) setErrors(prev => ({ ...prev, branch_id: '' }));
                                                     }}
                                                 >
-                                                    <SelectTrigger 
-                                                        id="branch" 
+                                                    <SelectTrigger
+                                                        id="branch"
                                                         className={errors.branch_id ? "border-destructive" : ""}
                                                     >
                                                         <SelectValue placeholder="Select Branch" />
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {branches.map(b => (
-                                                            <SelectItem 
-                                                                key={b.id} 
+                                                            <SelectItem
+                                                                key={b.id}
                                                                 value={b.id.toString()}
                                                             >
                                                                 <div className="flex items-center gap-2">
@@ -900,7 +901,7 @@ const OwnerStaffManagement = () => {
                                                 </div>
                                                 <Switch
                                                     checked={formData.is_active}
-                                                    onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
+                                                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                                                 />
                                             </div>
                                         </div>
@@ -919,10 +920,10 @@ const OwnerStaffManagement = () => {
                                             </div>
                                             <div className="flex flex-wrap gap-2">
                                                 {Object.keys(ROLE_PRESETS).map(role => (
-                                                    <Button 
-                                                        key={role} 
-                                                        type="button" 
-                                                        variant="outline" 
+                                                    <Button
+                                                        key={role}
+                                                        type="button"
+                                                        variant="outline"
                                                         size="sm"
                                                         onClick={() => applyPreset(role as any)}
                                                         className="capitalize"
@@ -935,7 +936,7 @@ const OwnerStaffManagement = () => {
                                     </div>
                                 </div>
                             </TabsContent>
-                            
+
                             <TabsContent value="permissions" className="space-y-6">
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2">
@@ -947,7 +948,7 @@ const OwnerStaffManagement = () => {
                                             </p>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {Object.entries(PERMISSION_MAP).map(([module, config]) => (
                                             <Card key={module} className="overflow-hidden">
@@ -959,17 +960,17 @@ const OwnerStaffManagement = () => {
                                                 <CardContent className="pt-4">
                                                     <div className="space-y-3">
                                                         {config.actions.map(action => (
-                                                            <div 
-                                                                key={action} 
+                                                            <div
+                                                                key={action}
                                                                 className="flex items-center justify-between"
                                                             >
-                                                                <Label 
+                                                                <Label
                                                                     htmlFor={`${module}-${action}`}
                                                                     className="text-sm cursor-pointer flex-1"
                                                                 >
                                                                     {action.replace('_', ' ')}
                                                                 </Label>
-                                                                <Checkbox 
+                                                                <Checkbox
                                                                     id={`${module}-${action}`}
                                                                     checked={formData.permissions[module]?.[action] || false}
                                                                     onCheckedChange={() => handleToggle(module, action)}
@@ -983,7 +984,7 @@ const OwnerStaffManagement = () => {
                                     </div>
                                 </div>
                             </TabsContent>
-                            
+
                             <TabsContent value="preview" className="space-y-6">
                                 <Card>
                                     <CardHeader>
@@ -1010,9 +1011,9 @@ const OwnerStaffManagement = () => {
                                                 <p className="text-muted-foreground">{formData.email || 'Not set'}</p>
                                             </div>
                                         </div>
-                                        
+
                                         <Separator />
-                                        
+
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <Label className="text-sm text-muted-foreground">Role</Label>
@@ -1025,14 +1026,14 @@ const OwnerStaffManagement = () => {
                                                 </p>
                                             </div>
                                         </div>
-                                        
+
                                         <Separator />
-                                        
+
                                         <div>
                                             <Label className="text-sm text-muted-foreground mb-2">Permissions Summary</Label>
                                             <div className="flex flex-wrap gap-2">
-                                                {Object.entries(formData.permissions).map(([module, actions]) => 
-                                                    Object.entries(actions).map(([action, enabled]) => 
+                                                {Object.entries(formData.permissions).map(([module, actions]) =>
+                                                    Object.entries(actions).map(([action, enabled]) =>
                                                         enabled && (
                                                             <Badge key={`${module}-${action}`} variant="outline">
                                                                 {PERMISSION_MAP[module]?.label} - {action.replace('_', ' ')}
@@ -1049,18 +1050,18 @@ const OwnerStaffManagement = () => {
                                 </Card>
                             </TabsContent>
                         </Tabs>
-                        
+
                         <DialogFooter>
-                            <Button 
-                                type="button" 
-                                variant="outline" 
+                            <Button
+                                type="button"
+                                variant="outline"
                                 onClick={() => setOpenDialog(false)}
                                 disabled={submitting}
                             >
                                 Cancel
                             </Button>
-                            <Button 
-                                type="submit" 
+                            <Button
+                                type="submit"
                                 disabled={submitting}
                                 className="min-w-[140px]"
                             >
@@ -1094,7 +1095,7 @@ const OwnerStaffManagement = () => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
+                        <AlertDialogAction
                             onClick={handleDelete}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >

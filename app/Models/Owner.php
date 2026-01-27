@@ -11,15 +11,22 @@ class Owner extends Model
 
     protected $fillable = ['name', 'slug', 'is_active'];
 
-    public function branches() {
+    public function branches()
+    {
         return $this->hasMany(Branch::class);
     }
 
-    public function products() {
+    public function products()
+    {
         return $this->hasMany(Product::class);
     }
     public function modifierGroups()
     {
         return $this->hasMany(ModifierGroup::class);
+    }
+
+    public function users()
+    {
+        return $this->hasMany(User::class);
     }
 }

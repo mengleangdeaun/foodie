@@ -75,9 +75,14 @@ const OwnerTables = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 300);
-  
-  // Refs for high-resolution QR codes
-  const qrRefs = useRef<Map<string, HTMLCanvasElement>>(new Map());
+
+  // Download State
+  const [downloadConfig, setDownloadConfig] = useState<{
+    tableNumber: string;
+    token: string;
+    type: 'png' | 'pdf';
+  } | null>(null);
+  const downloadQrRef = useRef<HTMLCanvasElement>(null);
 
   // Dialog & Modal States
   const [openAdd, setOpenAdd] = useState(false);
@@ -133,6 +138,103 @@ const OwnerTables = () => {
       setLoading(false);
     }
   }, [selectedBranch, toast]);
+
+  // Handle Download Effect
+  useEffect(() => {
+    const processDownload = async () => {
+      if (!downloadConfig || !downloadQrRef.current) return;
+
+      const { tableNumber, token, type } = downloadConfig;
+      const canvas = downloadQrRef.current;
+      const currentBranch = branches.find(b => b.id.toString() === selectedBranch);
+      const branchName = currentBranch?.branch_name || 'Unknown Branch';
+      const branchPrefix = branchName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+      try {
+        if (type === 'png') {
+          const pngUrl = canvas.toDataURL("image/png", 1.0);
+          const downloadLink = document.createElement("a");
+          downloadLink.href = pngUrl;
+          downloadLink.download = `${branchPrefix}_table_${tableNumber}_qr.png`;
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          document.body.removeChild(downloadLink);
+
+          toast({
+            title: "QR Code Downloaded",
+            description: `High-resolution PNG for Table ${tableNumber} saved.`
+          });
+        } else if (type === 'pdf') {
+          const { jsPDF } = await import('jspdf');
+          const qrDataUrl = canvas.toDataURL('image/png');
+
+          const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+          });
+
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const pageHeight = doc.internal.pageSize.getHeight();
+          const url = `${window.location.origin}/menu/scan/${token}`;
+
+          // Add header
+          doc.setFontSize(24);
+          doc.setTextColor(40, 40, 40);
+          doc.text(branchName, pageWidth / 2, 20, { align: 'center' });
+
+          // Add table number
+          doc.setFontSize(18);
+          doc.setTextColor(60, 60, 60);
+          doc.text(`Table: ${tableNumber}`, pageWidth / 2, 30, { align: 'center' });
+
+          // Add QR code
+          const qrWidth = 80;
+          const qrHeight = 80;
+          const qrX = (pageWidth - qrWidth) / 2;
+          const qrY = 40;
+          doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrWidth, qrHeight);
+
+          // Add URL
+          doc.setFontSize(10);
+          doc.setTextColor(100, 100, 100);
+          const urlY = qrY + qrHeight + 10;
+          doc.text('Scan this QR code to view menu:', pageWidth / 2, urlY, { align: 'center' });
+
+          doc.setFontSize(9);
+          doc.setTextColor(30, 64, 175);
+          doc.text(url, pageWidth / 2, urlY + 5, { align: 'center' });
+
+          // Add footer
+          doc.setFontSize(8);
+          doc.setTextColor(120, 120, 120);
+          const footerY = pageHeight - 10;
+          doc.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, footerY, { align: 'center' });
+
+          const fileName = `${branchPrefix}_table_${tableNumber}_qr.pdf`;
+          doc.save(fileName);
+
+          toast({
+            title: "PDF Downloaded",
+            description: `High-resolution PDF for Table ${tableNumber} saved.`
+          });
+        }
+      } catch (error) {
+        console.error('Download error:', error);
+        toast({
+          variant: "destructive",
+          title: "Download Failed",
+          description: "An error occurred while generating the file."
+        });
+      } finally {
+        setDownloadConfig(null);
+      }
+    };
+
+    // Small timeout to ensure canvas is rendered
+    const timeoutId = setTimeout(processDownload, 100);
+    return () => clearTimeout(timeoutId);
+  }, [downloadConfig, branches, selectedBranch, toast]);
 
   // Filter tables based on search
   const filteredTables = useMemo(() => {
@@ -243,130 +345,11 @@ const OwnerTables = () => {
   };
 
   const handleDownloadPNG = (tableNumber: string, token: string) => {
-    // Use high-res canvas if available, otherwise fall back to visible canvas
-    let canvas = qrRefs.current.get(token);
-    if (!canvas) {
-      canvas = document.getElementById(`qr-${token}`) as HTMLCanvasElement;
-    }
-    
-    if (canvas) {
-      const currentBranch = branches.find(b => b.id.toString() === selectedBranch);
-      const branchPrefix = currentBranch
-        ? currentBranch.branch_name.replace(/[^a-z0-9]/gi, '_').toLowerCase()
-        : 'table';
-
-      // Create a new canvas for high-resolution download
-      const downloadCanvas = document.createElement('canvas');
-      const scale = 4; // Increase resolution by 4x
-      downloadCanvas.width = canvas.width * scale;
-      downloadCanvas.height = canvas.height * scale;
-      
-      const ctx = downloadCanvas.getContext('2d');
-      if (ctx) {
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(canvas, 0, 0, downloadCanvas.width, downloadCanvas.height);
-        
-        const pngUrl = downloadCanvas.toDataURL("image/png", 1.0);
-        const downloadLink = document.createElement("a");
-        downloadLink.href = pngUrl;
-        downloadLink.download = `${branchPrefix}_table_${tableNumber}_qr.png`;
-
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-
-        toast({
-          title: "QR Code Downloaded",
-          description: `High-resolution PNG for Table ${tableNumber} saved.`
-        });
-      }
-    }
+    setDownloadConfig({ tableNumber, token, type: 'png' });
   };
 
-  const handleDownloadPDF = async (tableNumber: string, token: string) => {
-    try {
-      // Dynamically import jsPDF (only when needed)
-      const { jsPDF } = await import('jspdf');
-      
-      const currentBranch = branches.find(b => b.id.toString() === selectedBranch);
-      const branchName = currentBranch?.branch_name || 'Unknown Branch';
-      const url = `${window.location.origin}/menu/scan/${token}`;
-      
-      // Get or create high-res QR code
-      let canvas = qrRefs.current.get(token);
-      if (!canvas) {
-        canvas = document.createElement('canvas');
-        const qrSize = 800; // High resolution for PDF
-        const qr = new QRCodeCanvas(canvas, {
-          value: url,
-          size: qrSize,
-          level: 'H',
-          includeMargin: true,
-        });
-        qrRefs.current.set(token, canvas);
-      }
-      
-      const qrDataUrl = canvas.toDataURL('image/png');
-      
-      // Create PDF
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      
-      // Add header
-      doc.setFontSize(24);
-      doc.setTextColor(40, 40, 40);
-      doc.text(branchName, pageWidth / 2, 20, { align: 'center' });
-      
-      // Add table number
-      doc.setFontSize(18);
-      doc.setTextColor(60, 60, 60);
-      doc.text(`Table: ${tableNumber}`, pageWidth / 2, 30, { align: 'center' });
-      
-      // Add QR code (centered, size: 80mm x 80mm)
-      const qrWidth = 80;
-      const qrHeight = 80;
-      const qrX = (pageWidth - qrWidth) / 2;
-      const qrY = 40;
-      doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrWidth, qrHeight);
-      
-      // Add URL
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      const urlY = qrY + qrHeight + 10;
-      doc.text('Scan this QR code to view menu:', pageWidth / 2, urlY, { align: 'center' });
-      
-      doc.setFontSize(9);
-      doc.setTextColor(30, 64, 175); // Blue color for URL
-      doc.text(url, pageWidth / 2, urlY + 5, { align: 'center' });
-      
-      // Add footer
-      doc.setFontSize(8);
-      doc.setTextColor(120, 120, 120);
-      const footerY = pageHeight - 10;
-      doc.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, footerY, { align: 'center' });
-      
-      // Save PDF
-      const fileName = `${branchName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_table_${tableNumber}_qr.pdf`;
-      doc.save(fileName);
-      
-      toast({
-        title: "PDF Downloaded",
-        description: `High-resolution PDF for Table ${tableNumber} saved.`
-      });
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast({
-        variant: "destructive",
-        title: "PDF Generation Failed",
-        description: "Could not generate PDF. Please try again."
-      });
-    }
+  const handleDownloadPDF = (tableNumber: string, token: string) => {
+    setDownloadConfig({ tableNumber, token, type: 'pdf' });
   };
 
   const handleCopyLink = (token: string, tableNumber: string) => {
@@ -405,26 +388,23 @@ const OwnerTables = () => {
     </Card>
   );
 
-  // Invisible high-resolution QR codes for PDF generation
-  const HighResQRCodes = () => (
-    <div className="hidden">
-      {tables.map((table) => (
-        <canvas
-          key={`highres-${table.id}`}
-          ref={(el) => {
-            if (el) {
-              qrRefs.current.set(table.qr_code_token, el);
-            }
-          }}
-          width="800"
-          height="800"
-        />
-      ))}
-    </div>
-  );
-
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
+      {/* Hidden High-res QR Render for Download */}
+      {downloadConfig && (
+        <div className="absolute top-0 left-0 -z-50 opacity-0 pointer-events-none">
+          <QRCodeCanvas
+            ref={downloadQrRef}
+            value={`${window.location.origin}/menu/scan/${downloadConfig.token}`}
+            size={1000} // High resolution
+            level="H"
+            includeMargin
+            bgColor="#ffffff"
+            fgColor="#000000"
+          />
+        </div>
+      )}
+
       {/* Header Section */}
       <div className="flex flex-col space-y-4">
         <div>
@@ -665,9 +645,6 @@ const OwnerTables = () => {
                       <TableIcon className="h-5 w-5 text-primary" />
                       {table.table_number}
                     </CardTitle>
-                    <Badge variant="outline" className="font-normal">
-                      Active
-                    </Badge>
                   </div>
                 </CardHeader>
 
@@ -723,7 +700,7 @@ const OwnerTables = () => {
                     <Copy className="h-3.5 w-3.5 mr-1.5" />
                     Copy
                   </Button>
-                  
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -764,9 +741,6 @@ const OwnerTables = () => {
           </div>
         </>
       )}
-
-      {/* Invisible high-res QR codes for PDF generation */}
-      <HighResQRCodes />
 
       {/* Edit Dialog */}
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
@@ -864,7 +838,7 @@ const OwnerTables = () => {
           </div>
         }
         confirmText="Regenerate Token"
-        confirmVariant="destructive"
+        variant="destructive"
         icon={<RefreshCw className="h-5 w-5 text-amber-500" />}
       />
 
@@ -875,7 +849,7 @@ const OwnerTables = () => {
         onConfirm={handleDeleteTable}
         title="Delete Table"
         description="This action cannot be undone. All associated QR codes will become invalid."
-        isLoading={actionLoading}
+        loading={actionLoading}
       />
     </div>
   );

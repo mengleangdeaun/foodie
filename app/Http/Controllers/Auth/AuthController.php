@@ -11,43 +11,47 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-public function login(Request $request)
-{
-    $request->validate([
-        'email' => 'required|email',
-        'password' => 'required',
-    ]);
+    public function login(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
 
-    $user = User::where('email', $request->email)->first();
+        $user = User::where('email', $request->email)->first();
 
-    if (!$user || !Hash::check($request->password, $user->password)) {
-        return response()->json(['message' => 'Invalid credentials'], 401);
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Invalid credentials'], 401);
+        }
+
+        if (!$user->is_active) {
+            return response()->json(['message' => 'Your account is deactivated. Please contact support.'], 403);
+        }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        // Load branch relationship for managers/staff
+        $branch = $user->branch()->first();
+
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'branch_id' => $user->branch_id,
+                'branch' => $branch, // Attach the branch settings here
+                'permissions' => $user->permissions ?? (object) []
+            ]
+        ]);
     }
-
-    $token = $user->createToken('auth_token')->plainTextToken;
-
-    // Load branch relationship for managers/staff
-    $branch = $user->branch()->first(); 
-
-    return response()->json([
-        'access_token' => $token,
-        'token_type'   => 'Bearer',
-        'user' => [
-            'id'          => $user->id,
-            'name'        => $user->name,
-            'email'       => $user->email,
-            'role'        => $user->role,
-            'branch_id'   => $user->branch_id,
-            'branch'      => $branch, // Attach the branch settings here
-            'permissions' => $user->permissions ?? (object)[]
-        ]
-    ]);
-}
 
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
         return response()->json(['message' => 'Logged out successfully']);
     }
-    
+
 }

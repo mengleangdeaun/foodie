@@ -6,6 +6,7 @@ const Error = lazy(() => import('../components/Error'));
 const Index = lazy(() => import('../pages/Index'));
 const Login = lazy(() => import('../pages/Auth/login'));
 const Unauthorized = lazy(() => import('../pages/Auth/Unauthorized'));
+const AccountDeactivated = lazy(() => import('../pages/Auth/AccountDeactivated'));
 const ForgotPassword = lazy(() => import('../pages/Auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('../pages/Auth/ResetPassword'));
 const CustomerMenu = lazy(() => import('../pages/Customer/CustomerMenu'));
@@ -14,6 +15,8 @@ const CustomerMenu = lazy(() => import('../pages/Customer/CustomerMenu'));
 const SuperAdminDashboard = lazy(() => import('../pages/SuperAdmin/Dashboard'));
 const RestaurantList = lazy(() => import('../pages/SuperAdmin/RestaurantList'));
 const OnboardRestaurant = lazy(() => import('../pages/SuperAdmin/OnboardRestaurant'));
+const LandingPageSettings = lazy(() => import('../pages/SuperAdmin/LandingPageSettings'));
+const ContactSubmissions = lazy(() => import('../pages/SuperAdmin/ContactSubmissions')); // New Import
 
 // Owner & Operational
 const OwnerDashboard = lazy(() => import('../pages/Owner/BranchDashboard'));
@@ -42,18 +45,27 @@ const OwnerCategories = lazy(() => import('../pages/Owner/Categories'));
 const OwnerProducts = lazy(() => import('../pages/Owner/Products'));
 const OwnerTables = lazy(() => import('../pages/Owner/Tables'));
 
+
+const Register = lazy(() => import('../pages/Auth/Register')); // Import Register
+
 const routes = [
+    { path: '/register', element: <Register />, layout: 'blank' },
     { path: '/login', element: <Login />, layout: 'blank' },
     { path: '/auth/forgot-password', element: <ForgotPassword />, layout: 'blank' },
     // Route for reset password with token (handled by params)
     { path: '/reset-password', element: <ResetPassword />, layout: 'blank' },
     { path: '/menu/scan/:token', element: <CustomerMenu />, layout: 'blank' },
+    { path: '/menu/scan/:token', element: <CustomerMenu />, layout: 'blank' },
     { path: '/admin/unauthorized', element: <Unauthorized />, layout: 'blank' },
+    { path: '/auth/account-deactivated', element: <AccountDeactivated />, layout: 'blank' },
 
     // --- Super Admin ---
     { path: '/super-admin/dashboard', element: <ProtectedRoute><SuperAdminDashboard /></ProtectedRoute>, layout: 'default' },
     { path: '/super-admin/restaurants', element: <ProtectedRoute><RestaurantList /></ProtectedRoute>, layout: 'default' },
+    { path: '/super-admin/restaurants', element: <ProtectedRoute><RestaurantList /></ProtectedRoute>, layout: 'default' },
     { path: '/super-admin/onboard-restaurant', element: <ProtectedRoute><OnboardRestaurant /></ProtectedRoute>, layout: 'default' },
+    { path: '/super-admin/settings/landing-page', element: <ProtectedRoute><LandingPageSettings /></ProtectedRoute>, layout: 'default' },
+    { path: '/super-admin/contact-messages', element: <ProtectedRoute><ContactSubmissions /></ProtectedRoute>, layout: 'default' },
 
     // --- POS & Orders (Granular) ---
     {
@@ -144,7 +156,7 @@ const routes = [
         layout: 'blank',
     },
 
-    { path: '/', element: <Index />, layout: 'default' },
+    { path: '/', element: <Index />, layout: 'blank' },
 ];
 
 export { routes };

@@ -35,10 +35,13 @@ use App\Http\Controllers\ProfileController;
 */
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/forgot-password', [ForgotPasswordController::class, 'sendResetLink']);
+Route::post('/register-tenant', [TenantController::class, 'store'])->middleware('throttle:5,1');
 Route::post('/reset-password', [ForgotPasswordController::class, 'reset']);
 Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle']);
+Route::get('/landing-page', [App\Http\Controllers\Api\LandingPageController::class, 'index']);
 
 // Customer Menu & Ordering
+Route::post('/public/contact', [App\Http\Controllers\Public\ContactController::class, 'submit'])->middleware('throttle:3,1');
 Route::prefix('public')->group(function () {
     Route::get('/menu/scan/{token}', [PublicMenuController::class, 'show']);
     Route::post('/menu/order/{token}', [OrderController::class, 'store']);
@@ -84,6 +87,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('super-admin')->middleware('role:super_admin')->group(function () {
         Route::get('/restaurants', [TenantController::class, 'index']);
         Route::post('/onboard-restaurant', [TenantController::class, 'store']);
+        Route::post('/tenants/{id}/approve', [TenantController::class, 'approve']);
+        Route::post('/tenants/{id}/decline', [TenantController::class, 'decline']);
+        Route::put('/tenants/{id}', [TenantController::class, 'update']);
+        Route::post('/tenants/{id}/suspend', [TenantController::class, 'suspend']);
+        Route::put('/landing-page', [App\Http\Controllers\Api\LandingPageController::class, 'update']);
+        Route::get('/contact-submissions', [App\Http\Controllers\Public\ContactController::class, 'index']);
     });
 
     /*

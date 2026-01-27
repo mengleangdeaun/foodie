@@ -14,11 +14,12 @@ interface ConfirmationModalProps {
     onClose: () => void;
     onConfirm: () => void;
     title: string;
-    description: string;
+    description: React.ReactNode;
     confirmText?: string;
     cancelText?: string;
     variant?: "default" | "destructive";
     isLoading?: boolean;
+    icon?: React.ReactNode;
 }
 
 const ConfirmationModal = ({
@@ -30,14 +31,19 @@ const ConfirmationModal = ({
     confirmText = "Confirm",
     cancelText = "Cancel",
     variant = "default",
-    isLoading = false
+    isLoading = false,
+    icon
 }: ConfirmationModalProps) => {
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <div className="flex items-center gap-2 mb-2">
-                        {variant === "destructive" && (
+                        {icon ? (
+                            <div className="p-2 bg-muted/50 rounded-full">
+                                {icon}
+                            </div>
+                        ) : variant === "destructive" && (
                             <div className="p-2 bg-destructive/10 rounded-full">
                                 <AlertTriangle className="h-5 w-5 text-destructive" />
                             </div>
@@ -52,9 +58,9 @@ const ConfirmationModal = ({
                     <Button variant="ghost" onClick={onClose} disabled={isLoading}>
                         {cancelText}
                     </Button>
-                    <Button 
-                        variant={variant} 
-                        onClick={onConfirm} 
+                    <Button
+                        variant={variant}
+                        onClick={onConfirm}
                         disabled={isLoading}
                         className="min-w-[100px]"
                     >

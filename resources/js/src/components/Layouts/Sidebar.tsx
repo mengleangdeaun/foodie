@@ -5,17 +5,17 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { toggleSidebar } from '../../store/themeConfigSlice';
 import { IRootState } from '../../store';
 import { useState, useEffect } from 'react';
-import { usePermission } from '@/hooks/usePermission'; 
+import { usePermission } from '@/hooks/usePermission';
 import { useAuth } from '@/context/AuthContext'; //
 import AnimateHeight from 'react-animate-height';
-import { 
-    LayoutDashboard, Store, ClipboardList, Layers, 
-    Utensils, Hash, Users, Bike, UserCircle, ShoppingCart, List, 
+import {
+    LayoutDashboard, Store, ClipboardList, Layers,
+    Utensils, Hash, Users, Bike, UserCircle, ShoppingCart, List,
     ChefHat, Monitor, Warehouse,
     Dessert,
     Tag,
     Tags,
-    RadioTower
+    RadioTower, Mail
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -54,20 +54,20 @@ const Sidebar = () => {
                         <ul className="relative font-semibold space-y-0.5 p-4 py-0">
 
                             {['owner', 'manager', 'chef'].includes(user?.role || '') && (
-                                    <>
-                                        <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1 text-[11px] ">
-                                            <span>{t('Kitchen Display')}</span>
-                                        </h2>
-                                        <li className="menu nav-item">
-                                            <NavLink to="/admin/kitchen" className="nav-link group w-full">
-                                                <Monitor size={20} className=" group-hover:!text-primary shrink-0" />
-                                                <span className="ltr:pl-3 rtl:pr-3 font-black uppercase ">{t('Live KDS Terminal')}</span>
-                                            </NavLink>
-                                        </li>
-                                    </>
-                                )}
+                                <>
+                                    <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1 text-[11px] ">
+                                        <span>{t('Kitchen Display')}</span>
+                                    </h2>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/admin/kitchen" className="nav-link group w-full">
+                                            <Monitor size={20} className=" group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3 font-black uppercase ">{t('Live KDS Terminal')}</span>
+                                        </NavLink>
+                                    </li>
+                                </>
+                            )}
 
-                            
+
                             {/* --- SUPER ADMIN SECTION --- */}
                             {role === 'super_admin' && (
                                 <>
@@ -90,6 +90,18 @@ const Sidebar = () => {
                                         <NavLink to="/super-admin/restaurants" className="nav-link group w-full">
                                             <Store size={20} className="group-hover:!text-primary shrink-0" />
                                             <span className="ltr:pl-3 rtl:pr-3">{t('Manage Restaurants')}</span>
+                                        </NavLink>
+                                    </li>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/super-admin/settings/landing-page" className="nav-link group w-full">
+                                            <Monitor size={20} className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3">{t('Landing Page')}</span>
+                                        </NavLink>
+                                    </li>
+                                    <li className="menu nav-item">
+                                        <NavLink to="/super-admin/contact-messages" className="nav-link group w-full">
+                                            <Mail size={20} className="group-hover:!text-primary shrink-0" />
+                                            <span className="ltr:pl-3 rtl:pr-3">{t('Contact Messages')}</span>
                                         </NavLink>
                                     </li>
                                 </>
@@ -231,10 +243,10 @@ const Sidebar = () => {
 
 
                             <h2 className="py-3 px-7 flex items-center uppercase font-extrabold bg-white-light/30 dark:bg-dark dark:bg-opacity-[0.08] -mx-4 mb-1 text-[11px]">
-                                    <span>{t('Settings')}</span>
+                                <span>{t('Settings')}</span>
                             </h2>
 
-                             <li className="menu nav-item">
+                            <li className="menu nav-item">
                                 <button type="button" className={`${currentMenu === 'component' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('component')}>
                                     <div className="flex items-center">
                                         <svg className="group-hover:!text-primary shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

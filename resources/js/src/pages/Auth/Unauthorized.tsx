@@ -15,7 +15,7 @@ const Unauthorized = () => {
                 </div>
             </div>
 
-            <h1 className="text-4xl font-black text-slate-900 mb-2 italic uppercase tracking-tighter">
+            <h1 className="text-4xl font-black text-slate-900 mb-2 uppercase tracking-tighter">
                 Access Denied
             </h1>
             
@@ -41,7 +41,8 @@ const Unauthorized = () => {
                 </Button>
                 
                 <Button 
-                    className="flex-1 h-12 font-bold bg-slate-900 hover:bg-slate-800"
+                    variant="outline"
+                    className="flex-1 h-12 font-bold border-2"
                     asChild
                 >
                     <Link to="/admin/dashboard">
