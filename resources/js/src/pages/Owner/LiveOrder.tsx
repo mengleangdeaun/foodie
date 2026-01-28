@@ -48,18 +48,9 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import OrderCancellationModal from '@/components/orders/OrderCancellationModal';
 
-// Status Mapping Constants
-export const ORDER_STATUS = {
-    PENDING: 'pending',
-    CONFIRMED: 'confirmed',
-    COOKING: 'cooking',
-    READY: 'ready',
-    IN_SERVICE: 'in_service',
-    PAID: 'paid',
-    CANCELLED: 'cancelled'
-} as const;
-
-export type OrderStatus = typeof ORDER_STATUS[keyof typeof ORDER_STATUS];
+import { ORDER_STATUS } from "@/constants/orderStatus";
+import { Order, OrderStatus, OrderItem } from "@/types";
+// Get all status values as an array
 
 // Get all status values as an array
 const ALL_STATUS_VALUES = Object.values(ORDER_STATUS);
@@ -159,39 +150,7 @@ const STATUS_ACTION_LABELS: Record<OrderStatus, string> = {
     [ORDER_STATUS.CANCELLED]: 'Cancelled'
 };
 
-interface OrderItem {
-    id: number;
-    quantity: number;
-    product: {
-        name: string;
-        price: number;
-    };
-    remark: string;
-}
 
-interface Order {
-    id: number;
-    total: number;
-    status: OrderStatus;
-    created_at: string;
-    items: OrderItem[];
-    restaurant_table?: {
-        table_number: string;
-    };
-    delivery_partner?: {
-        name: string;
-    };
-    order_type?: 'dine-in' | 'takeaway' | 'delivery';
-    histories?: {
-        from_status: OrderStatus;
-        to_status: OrderStatus;
-        note: string;
-        created_at: string;
-        user?: {
-            name: string;
-        }
-    }[];
-}
 
 interface StatsCardProps {
     title: string;
@@ -502,7 +461,7 @@ const AdminLiveDashboard = () => {
 
                         toast({
                             title: "New Order Received",
-                            description: `Order #${data.order.id} - ${getOrderDisplayLabel(data.order)}`,
+                            description: `Order # ${data.order.order_code} ${getOrderDisplayLabel(data.order)}`,
                             duration: 3000,
                         });
                     }

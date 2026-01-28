@@ -22,6 +22,7 @@ const ContactSubmissions = lazy(() => import('../pages/SuperAdmin/ContactSubmiss
 const OwnerDashboard = lazy(() => import('../pages/Owner/BranchDashboard'));
 const OwnnerBranchOverview = lazy(() => import('../pages/Owner/Overview'));
 const OwnerBranches = lazy(() => import('../pages/Owner/Branches'));
+const BranchContent = lazy(() => import('../pages/Owner/BranchContent'));
 const StaffManagement = lazy(() => import('../pages/Owner/StaffManagement'));
 const DeliveryPartnerManagement = lazy(() => import('../pages/Owner/DeliveryPartnerManagement'));
 const POSPage = lazy(() => import('../pages/Owner/POSPage'));
@@ -102,6 +103,7 @@ const routes = [
     { path: '/admin/overview', element: <ProtectedRoute><OwnnerBranchOverview /></ProtectedRoute>, layout: 'default' },
     { path: '/admin/dashboard', element: <ProtectedRoute><OwnerDashboard /></ProtectedRoute>, layout: 'default' },
     { path: '/admin/branches', element: <ProtectedRoute><OwnerBranches /></ProtectedRoute>, layout: 'default' },
+    { path: '/owner/branches/:id/content', element: <ProtectedRoute><BranchContent /></ProtectedRoute>, layout: 'default' },
     { path: '/admin/staff', element: <ProtectedRoute><StaffManagement /></ProtectedRoute>, layout: 'default' },
     { path: '/admin/delivery-partners', element: <ProtectedRoute><DeliveryPartnerManagement /></ProtectedRoute>, layout: 'default' },
     { path: '/admin/settings/receipt', element: <ProtectedRoute><ReceiptSettings /></ProtectedRoute>, layout: 'default' },

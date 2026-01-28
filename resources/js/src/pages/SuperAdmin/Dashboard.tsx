@@ -8,20 +8,24 @@ import { Button } from "@/components/ui/button";
 
 const Dashboard = () => {
     const dispatch = useDispatch();
-    const [stats, setStats] = useState({ restaurants: 0, branches: 0 });
+    const [stats, setStats] = useState({
+        total_restaurants: 0,
+        active_restaurants: 0,
+        pending_restaurants: 0,
+        total_branches: 0,
+        total_users: 0
+    });
+    const [recentActivity, setRecentActivity] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         dispatch(setPageTitle('Super Admin Dashboard'));
-        
-        // Fetch stats from your Laravel TenantController index method
-        api.get('/super-admin/restaurants')
+
+        // Fetch stats from new DashboardController
+        api.get('/super-admin/dashboard/stats')
             .then(res => {
-                const totalBranches = res.data.reduce((acc: number, curr: any) => acc + curr.branches_count, 0);
-                setStats({
-                    restaurants: res.data.length,
-                    branches: totalBranches
-                });
+                setStats(res.data.stats);
+                setRecentActivity(res.data.recent_activity);
             })
             .catch(err => console.error("Error fetching stats:", err))
             .finally(() => setLoading(false));
@@ -42,7 +46,7 @@ const Dashboard = () => {
                     </ul>
                     <h2 className="text-2xl font-bold tracking-tight mt-2">Super Admin Console</h2>
                 </div>
-                
+
                 {/* Quick Action Button */}
                 <Button asChild>
                     <Link to="/super-admin/onboard-restaurant">
@@ -56,13 +60,33 @@ const Dashboard = () => {
 
             {/* Stats Overview */}
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                <Card className="border-l-4 border-l-danger">
+                <Card className="border-l-4 border-l-primary">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-white-dark">Total Restaurants</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold">{loading ? '...' : stats.restaurants}</div>
-                        <p className="text-xs text-muted-foreground mt-1">Active subscriptions</p>
+                        <div className="text-3xl font-bold">{loading ? '...' : stats.total_restaurants}</div>
+                        <p className="text-xs text-muted-foreground mt-1">All registered tenants</p>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-success">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-white-dark">Active Subscriptions</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold">{loading ? '...' : stats.active_restaurants}</div>
+                        <p className="text-xs text-muted-foreground mt-1">Live restaurants</p>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-warning">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-white-dark">Pending Approvals</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold">{loading ? '...' : stats.pending_restaurants}</div>
+                        <p className="text-xs text-muted-foreground mt-1">Requires verification</p>
                     </CardContent>
                 </Card>
 
@@ -71,8 +95,8 @@ const Dashboard = () => {
                         <CardTitle className="text-sm font-medium text-white-dark">Total Branches</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold">{loading ? '...' : stats.branches}</div>
-                        <p className="text-xs text-muted-foreground mt-1">Live locations</p>
+                        <div className="text-3xl font-bold">{loading ? '...' : stats.total_branches}</div>
+                        <p className="text-xs text-muted-foreground mt-1">Across all restaurants</p>
                     </CardContent>
                 </Card>
             </div>
@@ -80,18 +104,52 @@ const Dashboard = () => {
             {/* Recent Activity Section */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Recent Activity</CardTitle>
+                    <CardTitle>Recent Registrations</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    {stats.restaurants === 0 && !loading ? (
-                        <div className="flex flex-col items-center justify-center py-10 text-center">
-                            <p className="text-white-dark mb-4">No restaurants have been onboarded yet.</p>
-                            <Button variant="outline" asChild>
-                                <Link to="/super-admin/onboard-restaurant">Get Started</Link>
-                            </Button>
+                    {recentActivity.length > 0 ? (
+                        <div className="table-responsive">
+                            <table className="table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Registered Date</th>
+                                        <th>Restaurant Name</th>
+                                        <th>Admin</th>
+                                        <th>Status</th>
+                                        <th className="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {recentActivity.map((item: any) => (
+                                        <tr key={item.id}>
+                                            <td>{new Date(item.created_at).toLocaleDateString()}</td>
+                                            <td className="font-semibold">{item.name}</td>
+                                            <td>
+                                                <div className="flex flex-col">
+                                                    <span>{item.admin_name}</span>
+                                                    <span className="text-xs text-white-dark">{item.email}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className={`badge ${item.is_active ? 'bg-success' : 'bg-warning'}`}>
+                                                    {item.is_active ? 'Active' : 'Pending'}
+                                                </span>
+                                            </td>
+                                            <td className="text-end">
+                                                <Link to="/super-admin/restaurants" className="text-primary hover:underline">View</Link>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     ) : (
-                        <p className="text-sm text-white-dark italic">Recent logs and restaurant performance metrics will appear here.</p>
+                        <div className="flex flex-col items-center justify-center py-10 text-center">
+                            <p className="text-white-dark mb-4">No recent activity.</p>
+                            <Button variant="outline" asChild>
+                                <Link to="/super-admin/onboard-restaurant">Onboard First Restaurant</Link>
+                            </Button>
+                        </div>
                     )}
                 </CardContent>
             </Card>

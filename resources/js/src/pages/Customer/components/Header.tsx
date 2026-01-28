@@ -1,7 +1,8 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-  UtensilsCrossed, Clock, ShoppingBag, 
-  Sun, Moon, History, Settings, X 
+import {
+  UtensilsCrossed, Clock, ShoppingBag,
+  Sun, Moon, History, Settings, X
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -20,6 +21,8 @@ interface HeaderProps {
   onOpenSettings: () => void;
   onChangeCategory: (categoryId: string) => void;
 }
+
+import TimeFormat from "@/components/TimeFormat";
 
 const Header = ({
   branch,
@@ -40,6 +43,20 @@ const Header = ({
   const secondaryColor = branch?.secondary_color || '#8b5cf6';
   const accentColor = branch?.accent_color || '#10b981';
 
+  // Update favicon when branch data is available
+  useEffect(() => {
+    if (branch?.favicon_path) {
+      let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.type = 'image/png';
+      link.rel = 'shortcut icon';
+      link.href = `/storage/${branch.favicon_path}`;
+    }
+  }, [branch?.favicon_path]);
+
   // Calculate cart total using new pricing structure
   const calculateCartTotal = (): number => {
     return cart.reduce((total, item) => {
@@ -53,11 +70,11 @@ const Header = ({
       } else {
         basePrice = item.pricing?.branch_product_price || item.pricing?.product_base_price || 0;
       }
-      
+
       // Calculate modifier price
-      const modifierPrice = item.selectedModifiers?.reduce((sum: number, modifier: any) => 
+      const modifierPrice = item.selectedModifiers?.reduce((sum: number, modifier: any) =>
         sum + (modifier.price || 0), 0) || 0;
-      
+
       return total + ((basePrice + modifierPrice) * item.quantity);
     }, 0);
   };
@@ -73,11 +90,10 @@ const Header = ({
     <>
       <header
         ref={headerRef}
-        className={`sticky top-0 z-50 transition-all duration-300 ${
-          showHeader
-            ? 'translate-y-0 opacity-100'
-            : '-translate-y-full opacity-0'
-        }`}
+        className={`sticky top-0 z-50 transition-all duration-300 ${showHeader
+          ? 'translate-y-0 opacity-100'
+          : '-translate-y-full opacity-0'
+          }`}
         style={{
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(30px)',
@@ -122,8 +138,14 @@ const Header = ({
                 </h1>
                 <div className="flex items-center gap-1.5 mt-1">
                   <Clock className="h-3 w-3" style={{ color: primaryColor }} />
-                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    {branch?.opening_hours || 'Open Now'}
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
+                    {branch?.opening_time && branch?.closing_time ? (
+                      <>
+                        <TimeFormat time={branch.opening_time} /> - <TimeFormat time={branch.closing_time} />
+                      </>
+                    ) : (
+                      branch?.opening_hours || 'Open Now'
+                    )}
                   </span>
                 </div>
               </div>
@@ -208,23 +230,22 @@ const Header = ({
             <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
               <button
                 onClick={() => onChangeCategory('all')}
-                className={`shrink-0 px-4 py-2 text-sm font-medium rounded-full border transition-all whitespace-nowrap ${
-                  activeCategory === 'all'
-                    ? 'text-white shadow-lg'
-                    : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700'
-                }`}
+                className={`shrink-0 px-4 py-2 text-sm font-medium rounded-full border transition-all whitespace-nowrap ${activeCategory === 'all'
+                  ? 'text-white shadow-lg'
+                  : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700'
+                  }`}
                 style={
                   activeCategory === 'all'
                     ? {
-                        backgroundColor: primaryColor,
-                        borderColor: primaryColor,
-                        borderWidth: '2px',
-                        boxShadow: `0 4px 12px ${primaryColor}40`
-                      }
+                      backgroundColor: primaryColor,
+                      borderColor: primaryColor,
+                      borderWidth: '2px',
+                      boxShadow: `0 4px 12px ${primaryColor}40`
+                    }
                     : {
-                        borderColor: `${primaryColor}30`,
-                        borderWidth: '1px'
-                      }
+                      borderColor: `${primaryColor}30`,
+                      borderWidth: '1px'
+                    }
                 }
               >
                 All
@@ -234,23 +255,22 @@ const Header = ({
                 <button
                   key={cat.id}
                   onClick={() => onChangeCategory(cat.id.toString())}
-                  className={`shrink-0 px-4 py-2 text-sm font-medium rounded-full border transition-all whitespace-nowrap ${
-                    activeCategory === cat.id.toString()
-                      ? 'text-white shadow-lg'
-                      : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700'
-                  }`}
+                  className={`shrink-0 px-4 py-2 text-sm font-medium rounded-full border transition-all whitespace-nowrap ${activeCategory === cat.id.toString()
+                    ? 'text-white shadow-lg'
+                    : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700'
+                    }`}
                   style={
                     activeCategory === cat.id.toString()
                       ? {
-                          backgroundColor: primaryColor,
-                          borderColor: primaryColor,
-                          borderWidth: '2px',
-                          boxShadow: `0 4px 12px ${primaryColor}40`
-                        }
+                        backgroundColor: primaryColor,
+                        borderColor: primaryColor,
+                        borderWidth: '2px',
+                        boxShadow: `0 4px 12px ${primaryColor}40`
+                      }
                       : {
-                          borderColor: `${primaryColor}30`,
-                          borderWidth: '1px'
-                        }
+                        borderColor: `${primaryColor}30`,
+                        borderWidth: '1px'
+                      }
                   }
                 >
                   {cat.name}

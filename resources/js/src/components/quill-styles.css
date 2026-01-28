@@ -1,0 +1,459 @@
+/* components/ui/quill-styles.css */
+
+/* 
+ * Premium Editor Styles
+ * refined for a modern, tactile feel with seamless theme support
+ */
+
+/* --- Variables & tokens --- */
+.custom-quill-editor {
+    --quill-border: hsl(var(--border));
+    --quill-bg: hsl(var(--background));
+    --quill-fg: hsl(var(--foreground));
+    --quill-toolbar-bg: hsl(var(--card));
+    --quill-hover: hsl(var(--accent));
+    --quill-hover-fg: hsl(var(--accent-foreground));
+    --quill-active: hsl(var(--primary) / 0.1);
+    --quill-active-fg: hsl(var(--primary));
+    --quill-radius: var(--radius);
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Core Structure --- */
+.custom-quill-editor .ql-toolbar {
+    border: 1px solid var(--quill-border);
+    border-bottom: 1px solid var(--quill-border);
+    /* Distinct separator */
+    border-radius: calc(var(--quill-radius)) calc(var(--quill-radius)) 0 0;
+    background: var(--quill-toolbar-bg);
+    padding: 8px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    /* Increased gap */
+    align-items: center;
+    transition: border-color var(--transition-normal);
+    position: relative;
+    z-index: 20;
+}
+
+.custom-quill-editor .ql-container {
+    border: 1px solid var(--quill-border);
+    border-top: none;
+    border-radius: 0 0 var(--quill-radius) var(--quill-radius);
+    background: var(--quill-bg);
+    font-family: inherit;
+    transition: border-color var(--transition-normal);
+    position: relative;
+    z-index: 10;
+}
+
+.custom-quill-editor .ql-editor {
+    padding: 20px;
+    font-size: 15px;
+    /* Slightly larger for readability */
+    line-height: 1.6;
+    color: var(--quill-fg);
+    min-height: inherit;
+    outline: none;
+}
+
+.custom-quill-editor .ql-editor.ql-blank::before {
+    color: hsl(var(--muted-foreground));
+    font-style: normal;
+    font-size: 15px;
+    opacity: 0.5;
+    left: 20px;
+    right: 20px;
+}
+
+/* --- Toolbar Elements --- */
+
+/* Grouping divider (optional visual separation) */
+.custom-quill-editor .ql-formats {
+    margin-right: 12px !important;
+    position: relative;
+    display: flex;
+    gap: 2px;
+}
+
+.custom-quill-editor .ql-formats:not(:last-child)::after {
+    content: "";
+    display: block;
+    width: 1px;
+    height: 20px;
+    background-color: var(--quill-border);
+    position: absolute;
+    right: -7px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.5;
+}
+
+/* Buttons */
+.custom-quill-editor .ql-snow button {
+    width: 34px;
+    height: 34px;
+    padding: 7px;
+    border-radius: 6px;
+    /* Squircle-like */
+    color: hsl(var(--muted-foreground));
+    transition: all var(--transition-fast);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    /* Center icons */
+    align-items: center;
+    justify-content: center;
+}
+
+.custom-quill-editor .ql-snow button:hover {
+    background-color: var(--quill-hover);
+    color: var(--quill-hover-fg);
+    transform: translateY(-1px);
+    /* Subtle lift */
+}
+
+.custom-quill-editor .ql-snow button.ql-active {
+    background-color: var(--quill-active);
+    color: var(--quill-active-fg);
+}
+
+/* Icons styling */
+.custom-quill-editor .ql-snow .ql-stroke {
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
+.custom-quill-editor .ql-snow .ql-fill {
+    fill: currentColor;
+    stroke: none;
+}
+
+/* --- Pickers (Dropdowns) --- */
+.custom-quill-editor .ql-snow .ql-picker {
+    height: 34px;
+    font-size: 14px;
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
+    position: relative;
+    transition: color var(--transition-fast);
+}
+
+.custom-quill-editor .ql-snow .ql-picker-label {
+    padding: 0 10px;
+    height: 100%;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.custom-quill-editor .ql-snow .ql-picker-label:hover {
+    background-color: var(--quill-hover);
+    color: var(--quill-hover-fg);
+}
+
+.custom-quill-editor .ql-snow .ql-picker-label.ql-active {
+    color: var(--quill-active-fg);
+}
+
+/* Icon rotation on expand */
+.custom-quill-editor .ql-snow .ql-picker.ql-expanded .ql-picker-label svg {
+    transform: rotate(180deg);
+}
+
+.custom-quill-editor .ql-snow .ql-picker-label svg {
+    transition: transform var(--transition-normal);
+    margin-left: 6px;
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
+}
+
+/* Dropdown Menu */
+.custom-quill-editor .ql-snow .ql-picker-options {
+    display: none;
+    background-color: var(--quill-bg);
+    border: 1px solid var(--quill-border);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.15);
+    /* Deep, soft shadow */
+    padding: 6px;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 140px;
+    z-index: 100;
+    animation: scaleIn var(--transition-normal);
+    transform-origin: top left;
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.custom-quill-editor .ql-snow .ql-picker.ql-expanded .ql-picker-options {
+    display: block;
+}
+
+/* Dropdown Items */
+.custom-quill-editor .ql-snow .ql-picker-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    color: var(--quill-fg);
+    border-radius: 4px;
+    transition: all var(--transition-fast);
+    font-size: 14px;
+}
+
+.custom-quill-editor .ql-snow .ql-picker-item:hover {
+    background-color: var(--quill-hover);
+    color: var(--quill-hover-fg);
+}
+
+.custom-quill-editor .ql-snow .ql-picker-item.ql-selected {
+    background-color: var(--quill-active);
+    color: var(--quill-active-fg);
+    font-weight: 600;
+}
+
+/* Specific Pickers: Color & Background */
+.custom-quill-editor .ql-snow .ql-picker.ql-color,
+.custom-quill-editor .ql-snow .ql-picker.ql-background {
+    width: 44px;
+}
+
+.custom-quill-editor .ql-snow .ql-picker.ql-color .ql-picker-label,
+.custom-quill-editor .ql-snow .ql-picker.ql-background .ql-picker-label {
+    padding: 0;
+    justify-content: center;
+}
+
+.custom-quill-editor .ql-snow .ql-picker.ql-color .ql-picker-label svg,
+.custom-quill-editor .ql-snow .ql-picker.ql-background .ql-picker-label svg {
+    margin: 0;
+}
+
+.custom-quill-editor .ql-snow .ql-picker.ql-color .ql-picker-options,
+.custom-quill-editor .ql-snow .ql-picker.ql-background .ql-picker-options {
+    width: 220px;
+    padding: 10px;
+    display: none;
+    /* Changed to grid via override when expanded */
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.custom-quill-editor .ql-snow .ql-picker.ql-color.ql-expanded .ql-picker-options,
+.custom-quill-editor .ql-snow .ql-picker.ql-background.ql-expanded .ql-picker-options {
+    display: grid;
+}
+
+.custom-quill-editor .ql-snow .ql-color-picker .ql-picker-item,
+.custom-quill-editor .ql-snow .ql-background-picker .ql-picker-item {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid var(--quill-border);
+    padding: 0;
+}
+
+.custom-quill-editor .ql-snow .ql-color-picker .ql-picker-item:hover,
+.custom-quill-editor .ql-snow .ql-background-picker .ql-picker-item:hover {
+    transform: scale(1.15);
+    border-color: var(--quill-active-fg);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+}
+
+/* Specific Pickers: Align & Header */
+.custom-quill-editor .ql-snow .ql-picker.ql-align {
+    width: 44px;
+}
+
+.custom-quill-editor .ql-snow .ql-picker.ql-align .ql-picker-label {
+    padding: 0;
+    justify-content: center;
+}
+
+.custom-quill-editor .ql-snow .ql-picker.ql-align .ql-picker-label svg {
+    margin: 0;
+}
+
+.custom-quill-editor .ql-snow .ql-picker.ql-align .ql-picker-item {
+    display: flex;
+    justify-content: center;
+}
+
+
+/* --- Focus State (Premium Glow) --- */
+.custom-quill-editor:focus-within .ql-toolbar {
+    border-color: hsl(var(--primary));
+    /* No ring on toolbar, keep it clean */
+}
+
+.custom-quill-editor:focus-within .ql-container {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 4px 20px -5px hsl(var(--primary) / 0.15);
+    /* Premium glow */
+}
+
+
+/* --- Variants --- */
+
+/* Default variant - already defined above */
+
+/* Minimal Border (used in BranchContent) */
+.custom-quill-editor.minimal-border .ql-toolbar {
+    background: var(--quill-toolbar-bg);
+    border: 1px solid hsl(var(--border) / 0.6);
+    border-bottom: 1px solid hsl(var(--border) / 0.6);
+}
+
+.custom-quill-editor.minimal-border .ql-container {
+    border: 1px solid hsl(var(--border) / 0.6);
+    border-top: none;
+}
+
+.custom-quill-editor.minimal-border:focus-within .ql-toolbar,
+.custom-quill-editor.minimal-border:focus-within .ql-container {
+    border-color: hsl(var(--primary) / 0.7);
+    box-shadow: none;
+    /* Keep minimal */
+}
+
+/* Minimal variant */
+.custom-quill-editor.ql-minimal .ql-toolbar {
+    border: 1px solid transparent;
+    background: transparent;
+    border-bottom: 1px solid var(--quill-border);
+}
+
+.custom-quill-editor.ql-minimal .ql-container {
+    border: 1px solid transparent;
+    border-top: none;
+    background: transparent;
+}
+
+.custom-quill-editor.ql-minimal:focus-within .ql-toolbar,
+.custom-quill-editor.ql-minimal:focus-within .ql-container {
+    border-color: var(--quill-border);
+}
+
+/* Seamless variant */
+.custom-quill-editor.seamless .ql-toolbar {
+    border: none;
+    border-bottom: 1px solid transparent;
+    background: transparent;
+}
+
+.custom-quill-editor.seamless .ql-container {
+    border: none;
+    background: transparent;
+}
+
+.custom-quill-editor.seamless:focus-within .ql-toolbar {
+    border-bottom-color: var(--quill-border);
+}
+
+/* Inside Card (deprecated, use seamless) */
+.custom-quill-editor.inside-card .ql-toolbar {
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+    padding: 12px;
+    background: transparent;
+}
+
+.custom-quill-editor.inside-card .ql-container {
+    border: none;
+    background: transparent;
+}
+
+.custom-quill-editor.inside-card .ql-editor {
+    padding: 16px 0;
+    /* Remove horizontal padding since it's inside a card */
+}
+
+/* Compact */
+.custom-quill-editor.ql-compact .ql-toolbar {
+    padding: 4px 8px;
+    min-height: 40px;
+    gap: 4px;
+}
+
+.custom-quill-editor.ql-compact .ql-snow button {
+    width: 28px;
+    height: 28px;
+    padding: 5px;
+}
+
+.custom-quill-editor.ql-compact .ql-editor {
+    padding: 12px;
+    font-size: 13px;
+}
+
+/* Toolbar Size Variations */
+.custom-quill-editor.ql-toolbar-large .ql-toolbar {
+    padding: 12px 16px;
+    gap: 12px;
+}
+
+.custom-quill-editor.ql-toolbar-large .ql-snow button {
+    width: 38px;
+    height: 38px;
+    padding: 9px;
+}
+
+.custom-quill-editor.ql-toolbar-small .ql-toolbar {
+    padding: 4px 8px;
+    min-height: 36px;
+    gap: 4px;
+}
+
+.custom-quill-editor.ql-toolbar-small .ql-snow button {
+    width: 30px;
+    height: 30px;
+    padding: 5px;
+}
+
+.custom-quill-editor.ql-toolbar-small .ql-formats:not(:last-child)::after {
+    height: 16px;
+    right: -5px;
+}
+
+/* --- Scrollbar styling --- */
+.custom-quill-editor .ql-editor::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-quill-editor .ql-editor::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-quill-editor .ql-editor::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 10px;
+}
+
+.custom-quill-editor .ql-editor::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+}

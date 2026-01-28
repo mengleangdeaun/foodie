@@ -23,27 +23,32 @@ class PublicMenuController extends Controller
 
         $categories = Category::where('owner_id', $branch->owner_id)
             ->where('is_active', true)
-            ->with(['remarkPresets' => function($query) use ($branch) {
-                $query->whereHas('branches', function($q) use ($branch) {
-                    $q->where('branches.id', $branch->id);
-                });
-            }])
+            ->with([
+                'remarkPresets' => function ($query) use ($branch) {
+                    $query->whereHas('branches', function ($q) use ($branch) {
+                        $q->where('branches.id', $branch->id);
+                    });
+                }
+            ])
             ->get();
 
         // Get all products for this branch
         $products = Product::where('owner_id', $branch->owner_id)
             ->where('is_active', true)
-            ->whereHas('branches', function($query) use ($branch) {
+            ->whereHas('branches', function ($query) use ($branch) {
                 $query->where('branch_id', $branch->id)
-                      ->where('is_available', true); 
+                    ->where('is_available', true);
             })
             ->with([
-                'tags', 
+                'tags',
                 'sizes',
-                'modifierGroups.modifiers' => function($q) {
+                'modifierGroups' => function ($q) {
+                    $q->where('is_active', true);
+                },
+                'modifierGroups.modifiers' => function ($q) {
                     $q->where('is_available', true);
                 },
-                'branches' => function($query) use ($branch) {
+                'branches' => function ($query) use ($branch) {
                     $query->where('branch_id', $branch->id);
                 }
             ])
@@ -54,42 +59,42 @@ class PublicMenuController extends Controller
             ->get();
 
         // Process each product
-        $processedProducts = $products->map(function($product) use ($branch) {
+        $processedProducts = $products->map(function ($product) use ($branch) {
             $branchProduct = $product->branches->first();
             $branchProductId = $product->branch_product_id ?? ($branchProduct->pivot->id ?? null);
-            
+
             // Log for debugging (remove in production)
             // \Log::info("Product {$product->id}, Branch Product ID: {$branchProductId}");
-            
+
             // Process sizes with branch-specific pricing
             $sizesWithPricing = collect();
-            
+
             if ($product->sizes->isNotEmpty()) {
                 // Get all branch_product_size records for this branch_product
                 $branchProductSizes = BranchProductSize::where('branch_product_id', $branchProductId)
                     ->whereIn('size_id', $product->sizes->pluck('id'))
                     ->get();
-                    
+
                 // Log for debugging
                 // \Log::info("Found " . $branchProductSizes->count() . " branch product sizes for product {$product->id}");
-                
+
                 $branchProductSizes = $branchProductSizes->keyBy('size_id');
-                
+
                 foreach ($product->sizes as $size) {
                     $branchProductSize = $branchProductSizes[$size->id] ?? null;
-                    
+
                     // Skip if branch_product_size exists and is_available = 0
                     if ($branchProductSize && !$branchProductSize->is_available) {
                         continue;
                     }
-                    
+
                     // Log for debugging
                     // \Log::info("Size {$size->id}, BranchProductSize: " . ($branchProductSize ? 'Exists' : 'Not exists'));
-                    
+
                     // DETERMINE PRICE - FOLLOWING OWNER CONTROLLER LOGIC
                     $effectivePrice = null;
                     $priceSource = 'product_base';
-                    
+
                     // Check if we have a branch_product_size record
                     if ($branchProductSize) {
                         // Size-specific pricing exists
@@ -117,12 +122,12 @@ class PublicMenuController extends Controller
                             $priceSource = 'product_base';
                         }
                     }
-                    
+
                     // DETERMINE DISCOUNT
                     $discountPercentage = 0;
                     $isDiscountActive = false;
                     $discountSource = 'none';
-                    
+
                     if ($branchProductSize) {
                         // Use branch_product_size discount settings
                         $discountPercentage = (float) $branchProductSize->discount_percentage;
@@ -134,45 +139,45 @@ class PublicMenuController extends Controller
                         $isDiscountActive = (bool) ($branchProduct->pivot->has_active_discount ?? false);
                         $discountSource = 'branch_product';
                     }
-                    
+
                     // Calculate final price
                     $finalPrice = $effectivePrice;
                     if ($isDiscountActive && $discountPercentage > 0) {
                         $finalPrice = $effectivePrice - ($effectivePrice * ($discountPercentage / 100));
                     }
-                    
-$sizesWithPricing->push([
-    'id' => $size->id,
-    'name' => $size->name,
 
-    'base_price' => $effectivePrice,
-    'final_price' => round($finalPrice, 2, PHP_ROUND_HALF_UP),
+                    $sizesWithPricing->push([
+                        'id' => $size->id,
+                        'name' => $size->name,
 
-    'discount_percentage' => $discountPercentage,
-    'has_active_discount' => $isDiscountActive,
-    'is_available' => true,
+                        'base_price' => $effectivePrice,
+                        'final_price' => round($finalPrice, 2, PHP_ROUND_HALF_UP),
 
-    'price_source' => $priceSource,
-    'discount_source' => $discountSource,
+                        'discount_percentage' => $discountPercentage,
+                        'has_active_discount' => $isDiscountActive,
+                        'is_available' => true,
 
-    'has_branch_product_size_record' => !is_null($branchProductSize),
-    'branch_product_id' => $branchProductId,
-    'branch_product_size_id' => $branchProductSize->id ?? null,
-]);
+                        'price_source' => $priceSource,
+                        'discount_source' => $discountSource,
+
+                        'has_branch_product_size_record' => !is_null($branchProductSize),
+                        'branch_product_id' => $branchProductId,
+                        'branch_product_size_id' => $branchProductSize->id ?? null,
+                    ]);
 
                 }
             }
-            
+
             // Calculate product base price (for products without sizes)
             $productBasePrice = $branchProduct->pivot->branch_price ?? $product->base_price;
             $productDiscountPercentage = $branchProduct->pivot->discount_percentage ?? 0;
             $productHasActiveDiscount = $branchProduct->pivot->has_active_discount ?? false;
             $productEffectivePrice = (float) $productBasePrice;
-            
+
             if ($productHasActiveDiscount && $productDiscountPercentage > 0) {
                 $productEffectivePrice = (float) ($productBasePrice - ($productBasePrice * ($productDiscountPercentage / 100)));
             }
-            
+
             return [
                 'id' => $product->id,
                 'name' => $product->name,
@@ -182,14 +187,14 @@ $sizesWithPricing->push([
                 'tags' => $product->tags,
                 'sizes' => $sizesWithPricing->isEmpty() ? null : $sizesWithPricing,
                 'has_sizes' => !$sizesWithPricing->isEmpty(),
-                'modifier_groups' => $product->modifierGroups->map(function($group) {
+                'modifier_groups' => $product->modifierGroups->map(function ($group) {
                     return [
                         'id' => $group->id,
                         'name' => $group->name,
                         'selection_type' => $group->selection_type,
                         'min_selection' => $group->min_selection,
                         'max_selection' => $group->max_selection,
-                        'modifiers' => $group->modifiers->map(function($modifier) {
+                        'modifiers' => $group->modifiers->map(function ($modifier) {
                             return [
                                 'id' => $modifier->id,
                                 'name' => $modifier->name,
@@ -201,23 +206,48 @@ $sizesWithPricing->push([
                 'pricing' => [
                     'product_base_price' => (float) $product->base_price,
                     'branch_product_price' => $branchProduct ? (float) $branchProduct->pivot->branch_price : null,
-                    'is_available' => (bool)($branchProduct->pivot->is_available ?? true),
+                    'is_available' => (bool) ($branchProduct->pivot->is_available ?? true),
                     'discount_percentage' => (float) $productDiscountPercentage,
                     'has_active_discount' => (bool) $productHasActiveDiscount,
                     'effective_price' => (float) $productEffectivePrice,
-                    'is_popular' => (bool)($branchProduct->pivot->is_popular ?? false),
-                    'is_signature' => (bool)($branchProduct->pivot->is_signature ?? false),
-                    'is_chef_recommendation' => (bool)($branchProduct->pivot->is_chef_recommendation ?? false),
+                    'is_popular' => (bool) ($branchProduct->pivot->is_popular ?? false),
+                    'is_signature' => (bool) ($branchProduct->pivot->is_signature ?? false),
+                    'is_chef_recommendation' => (bool) ($branchProduct->pivot->is_chef_recommendation ?? false),
                 ],
             ];
         });
 
         return response()->json([
             'branch' => [
-                ...$branch->toArray(),
+                'id' => $branch->id,
+                'branch_name' => $branch->branch_name,
+                'branch_slug' => $branch->branch_slug,
+                'location' => $branch->location,
+                'logo_path' => $branch->logo_path,
+                'favicon_path' => $branch->favicon_path,
+                'primary_color' => $branch->primary_color,
+                'secondary_color' => $branch->secondary_color,
+                'accent_color' => $branch->accent_color,
+                'font_family' => $branch->font_family,
+                'font_family_headings' => $branch->font_family_headings,
+                'banner_image' => $branch->banner_image,
+                'opening_days' => $branch->opening_days,
+                'opening_time' => $branch->opening_time,
+                'closing_time' => $branch->closing_time,
+                'contact_phone' => $branch->contact_phone,
+                'contact_email' => $branch->contact_email,
+                'qr_payment_path' => $branch->qr_payment_path,
                 'tax_rate' => $branch->tax_rate ?? 10.00,
                 'tax_is_active' => $branch->tax_is_active ?? true,
-                'tax_name' => $branch->tax_name ?? 'Tax'
+                'tax_name' => $branch->tax_name ?? 'Tax',
+                'website' => $branch->website,
+                'is_about_visible' => (bool) ($branch->is_about_visible ?? true),
+                'about_description' => $branch->about_description,
+                'social_links' => $branch->social_links,
+                'terms_of_service' => $branch->terms_of_service,
+                'privacy_policy' => $branch->privacy_policy,
+                'is_tos_visible' => (bool) ($branch->is_tos_visible ?? false),
+                'is_privacy_visible' => (bool) ($branch->is_privacy_visible ?? false),
             ],
             'table_number' => $table->table_number,
             'categories' => $categories,

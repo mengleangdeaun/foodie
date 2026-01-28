@@ -249,7 +249,7 @@ const CartSheet = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl p-0">
+      <SheetContent side="bottom" className="h-[85vh] p-0">
         <div className="flex flex-col h-full">
           {/* Header */}
           <div
@@ -474,17 +474,7 @@ const CartSheet = ({
                     Please configure all items before placing order
                   </p>
                 )}
-                
-                {/* Terms */}
-                <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-4">
-                  By placing order, you agree to our terms and conditions
-                </p>
-                
-                {/* Branch Info */}
-                <div className="flex items-center justify-center gap-2 mt-2 text-xs text-slate-400 dark:text-slate-500">
-                  <UtensilsCrossed className="h-3 w-3" />
-                  <span>Ordering from {branch?.branch_name}</span>
-                </div>
+
               </div>
             </div>
           )}

@@ -26,7 +26,7 @@ const CartItem = ({
   onRemove
 }: CartItemProps) => {
   const category = categories.find(c => c.id === item.category_id);
-  
+
   const formatPrice = (price: any): number => {
     if (price === null || price === undefined) return 0;
     const num = typeof price === 'number' ? price : parseFloat(price);
@@ -43,9 +43,9 @@ const CartItem = ({
     if (propItemPrice !== undefined) {
       return propItemPrice;
     }
-    
+
     let basePrice = 0;
-    
+
     // For products with sizes, use selectedSize.final_price (already discounted)
     if (item.selectedSize && item.selectedSize.final_price !== undefined) {
       basePrice = formatPrice(item.selectedSize.final_price);
@@ -58,14 +58,14 @@ const CartItem = ({
     else {
       basePrice = formatPrice(item.price || 0);
     }
-    
+
     return basePrice;
   };
 
   // Calculate modifier price for ONE item
   const calculateModifierPrice = (): number => {
     if (!item.selectedModifiers || item.selectedModifiers.length === 0) return 0;
-    
+
     return item.selectedModifiers.reduce((total: number, modifier: any) => {
       return total + formatPrice(modifier.price);
     }, 0);
@@ -77,7 +77,7 @@ const CartItem = ({
     if (propItemTotalPrice !== undefined) {
       return propItemTotalPrice;
     }
-    
+
     const singleItemPrice = calculateItemPrice() + calculateModifierPrice();
     return singleItemPrice * item.quantity;
   };
@@ -85,12 +85,12 @@ const CartItem = ({
   // Use either prop price or calculate it
   const basePrice = calculateItemPrice();
   const modifierPrice = calculateModifierPrice();
-  const itemSinglePrice = propItemPrice !== undefined ? 
-    propItemPrice : 
+  const itemSinglePrice = propItemPrice !== undefined ?
+    propItemPrice :
     basePrice + modifierPrice;
-  
-  const itemTotalPrice = propItemTotalPrice !== undefined ? 
-    propItemTotalPrice : 
+
+  const itemTotalPrice = propItemTotalPrice !== undefined ?
+    propItemTotalPrice :
     itemSinglePrice * item.quantity;
 
   // Calculate base price without modifiers for breakdown
@@ -98,24 +98,24 @@ const CartItem = ({
     if (item.selectedSize && item.selectedSize.final_price !== undefined) {
       return formatPrice(item.selectedSize.final_price);
     }
-    
+
     if (item.pricing?.effective_price !== undefined) {
       return formatPrice(item.pricing.effective_price);
     }
-    
+
     return formatPrice(item.price || 0);
   };
 
   const basePriceWithoutModifiers = getBasePriceWithoutModifiers();
 
   // Check if size has discount
-  const hasSizeDiscount = item.selectedSize?.has_active_discount && 
-                          item.selectedSize?.discount_percentage > 0;
+  const hasSizeDiscount = item.selectedSize?.has_active_discount &&
+    item.selectedSize?.discount_percentage > 0;
 
   // Check if product (without size) has discount
-  const hasProductDiscount = !item.selectedSize && 
-                             item.pricing?.has_active_discount && 
-                             item.pricing?.discount_percentage > 0;
+  const hasProductDiscount = !item.selectedSize &&
+    item.pricing?.has_active_discount &&
+    item.pricing?.discount_percentage > 0;
 
   return (
     <div
@@ -164,7 +164,7 @@ const CartItem = ({
                   </span>
                 )}
               </div>
-              
+
               {/* Size display with discount info */}
               {item.selectedSize && (
                 <div className="flex items-center gap-2 mt-1">
@@ -178,12 +178,12 @@ const CartItem = ({
                   )}
                 </div>
               )}
-              
+
               <div className="text-sm text-slate-600 dark:text-slate-300 mt-1">
                 <span style={{ color: primaryColor }} className="font-bold">
                   ${formatPriceDisplay(itemSinglePrice)}
                 </span>
-                
+
                 {/* Show original price if discounted */}
                 {hasSizeDiscount && item.selectedSize && item.selectedSize.base_price && (
                   <span className="text-xs line-through text-slate-400 dark:text-slate-500 ml-2">
@@ -195,7 +195,7 @@ const CartItem = ({
                     ${formatPriceDisplay(item.pricing.product_base_price)}
                   </span>
                 )}
-                
+
                 {/* Modifier count */}
                 {item.selectedModifiers && item.selectedModifiers.length > 0 && (
                   <span className="text-xs ml-2">
@@ -293,23 +293,30 @@ const CartItem = ({
                 {preset.name}:
               </p>
               <div className="flex flex-wrap gap-2">
-                {preset.options.map((opt: string) => (
-                  <button
-                    key={opt}
-                    onClick={() => onToggleSmartRemark(item.configurationKey, preset.name, opt)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      item.selectedRemarks?.[preset.name] === opt 
-                        ? 'text-white shadow-sm' 
-                        : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
-                    }`}
-                    style={item.selectedRemarks?.[preset.name] === opt ? { 
-                      backgroundColor: primaryColor,
-                      borderColor: primaryColor
-                    } : {}}
-                  >
-                    {opt}
-                  </button>
-                ))}
+                {preset.options.map((opt: string) => {
+                  // Ensure selectedRemarks is treated as array or handled gracefully
+                  const selections = item.selectedRemarks?.[preset.name];
+                  const isSelected = Array.isArray(selections)
+                    ? selections.includes(opt)
+                    : selections === opt; // Fallback for legacy string state
+
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => onToggleSmartRemark(item.configurationKey, preset.name, opt)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${isSelected
+                          ? 'text-white shadow-sm'
+                          : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
+                        }`}
+                      style={isSelected ? {
+                        backgroundColor: primaryColor,
+                        borderColor: primaryColor
+                      } : {}}
+                    >
+                      {opt}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           ))}
@@ -342,7 +349,7 @@ const CartItem = ({
               <span>${formatPriceDisplay(basePriceWithoutModifiers)}</span>
             </div>
           )}
-          
+
           {/* Modifiers breakdown */}
           {item.selectedModifiers?.map((modifier: any) => (
             <div key={modifier.id} className="flex justify-between">
@@ -350,13 +357,13 @@ const CartItem = ({
               <span>${formatPriceDisplay(modifier.price)}</span>
             </div>
           ))}
-          
+
           {/* Total for one item */}
           <div className="flex justify-between font-medium pt-1 border-t border-slate-200 dark:border-slate-700 mt-1">
             <span>Price per item:</span>
             <span>${formatPriceDisplay(itemSinglePrice)}</span>
           </div>
-          
+
           {/* Quantity multiplier */}
           <div className="flex justify-between text-slate-600 dark:text-slate-400">
             <span>× {item.quantity} quantity</span>

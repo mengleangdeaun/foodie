@@ -4,12 +4,12 @@ import api from '@/util/api';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { 
-  Search, Plus, MessageSquare, Loader2, 
-  Tag, Info, ChevronRight, MapPin, Star, 
-  Clock, History, X, ShoppingBag, Moon, 
-  Sun, User, Settings, Home, Filter, 
-  Heart, ChevronLeft, Shield, Phone, 
+import {
+  Search, Plus, MessageSquare, Loader2,
+  Tag, Info, ChevronRight, MapPin, Star,
+  Clock, History, X, ShoppingBag, Moon,
+  Sun, User, Settings, Home, Filter,
+  Heart, ChevronLeft, Shield, Phone,
   Mail, Globe, CreditCard, Check
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -54,12 +54,12 @@ const CustomerMenu = () => {
   const [selectedSize, setSelectedSize] = useState<any>(null);
   const [selectedModifiers, setSelectedModifiers] = useState<number[]>([]);
   const [customRemark, setCustomRemark] = useState('');
-  
+
   const [branch, setBranch] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [cart, setCart] = useState<any[]>([]);
-  
+
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
 
@@ -68,13 +68,13 @@ const CustomerMenu = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
-  
+
   const [orderHistory, setOrderHistory] = useState<any[]>([]);
   const [activeOrderId, setActiveOrderId] = useState<number | null>(null);
   const [activeStatus, setActiveStatus] = useState<string>('idle');
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [collectedOrders, setCollectedOrders] = useState<any[]>([]);
-  
+
   const [lastScrollY, setLastScrollY] = useState(0);
   const [showHeader, setShowHeader] = useState(true);
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -82,19 +82,19 @@ const CustomerMenu = () => {
   const [discountAmounts, setDiscountAmounts] = useState<Record<string, number>>({});
   const headerRef = useRef<HTMLDivElement>(null);
 
-const [darkMode, setDarkMode] = useState(() => {
-  if (typeof window !== 'undefined') {
-    // Default to light mode (false)
-    const saved = localStorage.getItem('customerDarkMode');
-    if (saved !== null) {
-      // If user has explicitly set a preference, use it
-      return saved === 'true';
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      // Default to light mode (false)
+      const saved = localStorage.getItem('customerDarkMode');
+      if (saved !== null) {
+        // If user has explicitly set a preference, use it
+        return saved === 'true';
+      }
+      // Default to light mode
+      return false;
     }
-    // Default to light mode
-    return false;
-  }
-  return false; // Default to light mode
-});
+    return false; // Default to light mode
+  });
 
 
   // Effects
@@ -123,7 +123,7 @@ const [darkMode, setDarkMode] = useState(() => {
   useEffect(() => {
     const controlHeader = () => {
       const currentScrollY = window.scrollY;
-      
+
       if (currentScrollY < 50) {
         setShowHeader(true);
         setLastScrollY(currentScrollY);
@@ -143,15 +143,15 @@ const [darkMode, setDarkMode] = useState(() => {
     return () => window.removeEventListener('scroll', controlHeader);
   }, [lastScrollY]);
 
-useEffect(() => {
-  if (darkMode) {
-    document.documentElement.classList.add('dark');
-    localStorage.setItem('customerDarkMode', 'true');
-  } else {
-    document.documentElement.classList.remove('dark');
-    localStorage.setItem('customerDarkMode', 'false');
-  }
-}, [darkMode]);
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('customerDarkMode', 'true');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('customerDarkMode', 'false');
+    }
+  }, [darkMode]);
 
   // Functions
   const fetchMenu = async () => {
@@ -160,8 +160,8 @@ useEffect(() => {
       const res = await api.get(`/public/menu/scan/${token}`);
       clearInterval(interval);
       setProgress(100);
-      
-      setBranch(res.data.branch);
+
+      setBranch({ ...res.data.branch, table_number: res.data.table_number });
       setProducts(res.data.products || []);
       setCategories(res.data.categories || []);
     } finally {
@@ -180,7 +180,7 @@ useEffect(() => {
   const handleProductClick = (product: any) => {
     const hasSizes = product.sizes && product.sizes.length > 0;
     const hasModifiers = product.modifier_groups && product.modifier_groups.length > 0;
-    
+
     if (hasSizes || hasModifiers) {
       setConfiguringProduct(product);
       setSelectedSize(null);
@@ -191,271 +191,305 @@ useEffect(() => {
     }
   };
 
-const addToCart = (product: any, size: any = null, modifiers: any[] = [], remark: string = '', unitPrice?: number, remarkPresets?: Record<string, string>) => {
-  setCart(prev => {
-    // Generate a unique key for this cart item configuration
-    const modifiersKey = JSON.stringify(modifiers.map(m => m.id).sort());
-    const configKey = `${product.id}-${size?.id || 'no-size'}-${modifiersKey}`;
-    
-    // Check if the exact same configuration already exists
-    const existingIndex = prev.findIndex(item => 
-      item.configurationKey === configKey
-    );
-    
-    if (existingIndex !== -1) {
-      // Update quantity if same configuration exists
-      const updated = [...prev];
-      updated[existingIndex] = {
-        ...updated[existingIndex],
-        quantity: updated[existingIndex].quantity + 1
-      };
-      return updated;
-    }
-    
-    // IMPORTANT: Ensure we have the complete size object with pricing
-    let completeSize = size;
-    
-    // If we have a size but it doesn't have complete pricing info, 
-    // try to get it from the product's sizes array
-    if (size && product.sizes && product.sizes.length > 0) {
-      // Find the matching size in the product's sizes array
-      const matchingSize = product.sizes.find((s: any) => s.id === size.id);
-      if (matchingSize) {
-        completeSize = {
-          ...size,
-          // Ensure we have all pricing fields from the product's size object
-          base_price: matchingSize.base_price,
-          final_price: matchingSize.final_price,
-          discount_percentage: matchingSize.discount_percentage,
-          has_active_discount: matchingSize.has_active_discount,
-          is_available: matchingSize.is_available,
-          price_source: matchingSize.price_source,
-          discount_source: matchingSize.discount_source,
-          has_branch_product_size_record: matchingSize.has_branch_product_size_record
+  const addToCart = (product: any, size: any = null, modifiers: any[] = [], remark: string = '', unitPrice?: number, remarkPresets?: Record<string, string>) => {
+    setCart(prev => {
+      // Generate a unique key for this cart item configuration
+      const modifiersKey = JSON.stringify(modifiers.map(m => m.id).sort());
+      const configKey = `${product.id}-${size?.id || 'no-size'}-${modifiersKey}`;
+
+      // Check if the exact same configuration already exists
+      const existingIndex = prev.findIndex(item =>
+        item.configurationKey === configKey
+      );
+
+      if (existingIndex !== -1) {
+        // Update quantity if same configuration exists
+        const updated = [...prev];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: updated[existingIndex].quantity + 1
         };
+        return updated;
       }
-    }
-    
-    // Calculate unit price if not provided from ConfigurationModal
-    let calculatedUnitPrice = unitPrice;
-    if (calculatedUnitPrice === undefined) {
-      let basePrice = 0;
-      if (size) {
-        basePrice = formatPrice(size.final_price || size.base_price);
-      } else if (product.pricing?.effective_price !== undefined) {
-        basePrice = formatPrice(product.pricing.effective_price);
-      } else {
-        basePrice = formatPrice(product.pricing?.branch_product_price || product.pricing?.product_base_price || 0);
+
+      // IMPORTANT: Ensure we have the complete size object with pricing
+      let completeSize = size;
+
+      // If we have a size but it doesn't have complete pricing info, 
+      // try to get it from the product's sizes array
+      if (size && product.sizes && product.sizes.length > 0) {
+        // Find the matching size in the product's sizes array
+        const matchingSize = product.sizes.find((s: any) => s.id === size.id);
+        if (matchingSize) {
+          completeSize = {
+            ...size,
+            // Ensure we have all pricing fields from the product's size object
+            base_price: matchingSize.base_price,
+            final_price: matchingSize.final_price,
+            discount_percentage: matchingSize.discount_percentage,
+            has_active_discount: matchingSize.has_active_discount,
+            is_available: matchingSize.is_available,
+            price_source: matchingSize.price_source,
+            discount_source: matchingSize.discount_source,
+            has_branch_product_size_record: matchingSize.has_branch_product_size_record
+          };
+        }
       }
-      
-      const modifierPrice = modifiers.reduce((total: number, mod: any) => 
-        total + formatPrice(mod.price), 0);
-      
-      calculatedUnitPrice = basePrice + modifierPrice;
-    }
-    
-    // Parse remark to separate preset remarks and custom remark
-    let selectedRemarks = {};
-    let customRemark = remark;
-    
-    // Extract preset remarks from the combined remark string
-    const presetRegex = /\[([^:]+):\s*([^\]]+)\]/g;
-    let match;
-    while ((match = presetRegex.exec(remark)) !== null) {
-      selectedRemarks = {
-        ...selectedRemarks,
-        [match[1]]: match[2]
+
+      // Calculate unit price if not provided from ConfigurationModal
+      let calculatedUnitPrice = unitPrice;
+      if (calculatedUnitPrice === undefined) {
+        let basePrice = 0;
+        if (size) {
+          basePrice = formatPrice(size.final_price || size.base_price);
+        } else if (product.pricing?.effective_price !== undefined) {
+          basePrice = formatPrice(product.pricing.effective_price);
+        } else {
+          basePrice = formatPrice(product.pricing?.branch_product_price || product.pricing?.product_base_price || 0);
+        }
+
+        const modifierPrice = modifiers.reduce((total: number, mod: any) =>
+          total + formatPrice(mod.price), 0);
+
+        calculatedUnitPrice = basePrice + modifierPrice;
+      }
+
+      // Parse remark to separate preset remarks and custom remark
+      let selectedRemarks = {};
+      let customRemark = remark;
+
+      // Extract preset remarks from the combined remark string
+      const presetRegex = /\[([^:]+):\s*([^\]]+)\]/g;
+      let match;
+      while ((match = presetRegex.exec(remark)) !== null) {
+        selectedRemarks = {
+          ...selectedRemarks,
+          [match[1]]: match[2].split(',').map(s => s.trim())
+        };
+        // Remove preset remark from custom remark
+        customRemark = customRemark.replace(match[0], '').trim();
+      }
+
+      // Create the new cart item with unitPrice
+      const newCartItem = {
+        ...product,
+        quantity: 1,
+        remark: customRemark,
+        selectedRemarks: selectedRemarks,
+        selectedSize: completeSize,
+        selectedModifiers: modifiers,
+        selectedModifierIds: modifiers.map(m => m.id),
+        customRemark: customRemark,
+        configurationKey: configKey,
+        unitPrice: calculatedUnitPrice, // Store the calculated unit price
+        smartRemarkLabel: Object.entries(selectedRemarks)
+          .map(([key, value]) => `[${key}: ${Array.isArray(value) ? value.join(', ') : value}]`)
+          .join(' ')
       };
-      // Remove preset remark from custom remark
-      customRemark = customRemark.replace(match[0], '').trim();
-    }
-    
-    // Create the new cart item with unitPrice
-    const newCartItem = {
-      ...product,
-      quantity: 1,
-      remark: customRemark,
-      selectedRemarks: selectedRemarks,
-      selectedSize: completeSize,
-      selectedModifiers: modifiers,
-      selectedModifierIds: modifiers.map(m => m.id),
-      customRemark: customRemark,
-      configurationKey: configKey,
-      unitPrice: calculatedUnitPrice, // Store the calculated unit price
-      smartRemarkLabel: Object.entries(selectedRemarks)
-        .map(([key, value]) => `[${key}: ${value}]`)
-        .join(' ')
-    };
-    
-    return [...prev, newCartItem];
-  });
-  
-  setConfiguringProduct(null);
-  setSelectedSize(null);
-  setSelectedModifiers([]);
-  setCustomRemark('');
-  setSelectedRemarksForConfiguringProduct({});
-  
-  toast({
-    title: "Added to cart",
-    description: product.name,
-    duration: 1500,
-    className: "bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-100"
-  });
-};
 
-
-
-
-const updateQuantity = (configurationKey: string, delta: number) => {
-  setCart(prev => prev.map(item => 
-    item.configurationKey === configurationKey 
-      ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-      : item
-  ));
-};
-
-const removeFromCart = (configurationKey: string) => {
-  setCart(prev => prev.filter(item => item.configurationKey !== configurationKey));
-};
-
-const updateRemark = (configurationKey: string, remark: string) => {
-  setCart(prev => prev.map(item => 
-    item.configurationKey === configurationKey ? { ...item, remark } : item
-  ));
-};
-
-const toggleSmartRemark = (configurationKey: string, presetName: string, option: string) => {
-  setCart(prev => prev.map(item => {
-    if (item.configurationKey === configurationKey) {
-      const newSelections = { ...(item.selectedRemarks || {}), [presetName]: option };
-      const remarkStr = Object.entries(newSelections).map(([k, v]) => `[${k}: ${v}]`).join(' ');
-      return { ...item, selectedRemarks: newSelections, smartRemarkLabel: remarkStr };
-    }
-    return item;
-  }));
-};
-
-const handlePlaceOrder = async () => {
-  setActiveStatus('submitting');
-  try {
-    const orderItems = cart.map(item => {
-      // Calculate base price (size or product price) - for reference only
-      let basePrice = 0;
-      if (item.selectedSize) {
-        basePrice = formatPrice(item.selectedSize.final_price || item.selectedSize.base_price);
-      } else if (item.pricing?.effective_price !== undefined) {
-        basePrice = formatPrice(item.pricing.effective_price);
-      } else {
-        basePrice = formatPrice(item.pricing?.branch_product_price || item.pricing?.product_base_price || 0);
-      }
-      
-      // Calculate modifiers price
-      const modifiersPrice = item.selectedModifiers?.reduce((total: number, mod: any) => 
-        total + formatPrice(mod.price), 0) || 0;
-      
-      // Build remark from smart remarks and custom remark
-      const smartRemark = item.selectedRemarks ? 
-        Object.entries(item.selectedRemarks).map(([key, value]) => `[${key}: ${value}]`).join(' ') : '';
-      const finalRemark = `${smartRemark} ${item.customRemark || ''}`.trim();
-      
-      // Prepare selected_modifiers as array of IDs
-      const selectedModifierIds = item.selectedModifiers?.map((mod: any) => mod.id) || [];
-      
-      return {
-        product_id: item.id,
-        quantity: item.quantity,
-        size_id: item.selectedSize?.id || null, // Send only size_id (not the object)
-        selected_modifiers: selectedModifierIds,
-        remark: finalRemark,
-      };
+      return [...prev, newCartItem];
     });
 
-    console.log('Sending order items:', JSON.stringify(orderItems, null, 2));
+    setConfiguringProduct(null);
+    setSelectedSize(null);
+    setSelectedModifiers([]);
+    setCustomRemark('');
+    setSelectedRemarksForConfiguringProduct({});
 
-    const res = await api.post(`/public/menu/order/${token}`, {
-      items: orderItems
-    });
-
-    console.log('Order response:', res.data);
-
-    // Create a clean order object for local storage
-    const newOrder = {
-      id: res.data.order_id || Date.now(),
-      order_number: res.data.order_number || `ORDER-${Date.now()}`,
-      items: cart.map(item => ({
-        name: item.name,
-        size: item.selectedSize?.name,
-        quantity: item.quantity,
-        modifiers: item.selectedModifiers?.map((mod: any) => mod.name) || [],
-        price_per_item: calculateItemTotal(item) / item.quantity,
-        item_total: calculateItemTotal(item)
-      })),
-      subtotal: cartTotal,
-      tax: branch?.tax_is_active ? cartTotal * ((branch?.tax_rate || 10) / 100) : 0,
-      total: branch?.tax_is_active ? 
-        cartTotal + (cartTotal * ((branch?.tax_rate || 10) / 100)) : 
-        cartTotal,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      branch_id: branch?.id,
-      table_number: branch?.table_number || '01'
-    };
-
-    // Update history in localStorage
-    const updatedHistory = [newOrder, ...orderHistory];
-    setOrderHistory(updatedHistory);
-    localStorage.setItem('order_history', JSON.stringify(updatedHistory));
-    
-    // Add to pending orders for tracking
-    setPendingOrders(prev => [newOrder, ...prev]);
-    
-    // Set active order for real-time tracking
-    setActiveOrderId(newOrder.id);
-    setActiveStatus('pending');
-    
-    // Clear cart and close cart sheet
-    setCart([]);
-    setIsCartOpen(false);
-    
-    // Show success toast
     toast({
-      title: "Order Placed!",
-      description: `Order #${newOrder.order_number} has been submitted`,
-      duration: 3000,
+      title: "Added to cart",
+      description: product.name,
+      duration: 1500,
       className: "bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-100"
     });
-    
-  } catch (e: any) {
-    setActiveStatus('idle');
-    
-    // Enhanced error handling
-    const errorMessage = e.response?.data?.message || 
-                        e.response?.data?.error || 
-                        "Please try again or contact staff";
-    
-    // Log detailed error for debugging
-    console.error('Order submission error:', {
-      error: e,
-      response: e.response?.data,
-      orderItems: cart
-    });
-    
-    toast({ 
-      variant: "destructive", 
-      title: "Order Failed",
-      description: errorMessage,
-      duration: 5000
-    });
-  }
-};
+  };
+
+
+
+
+  const updateQuantity = (configurationKey: string, delta: number) => {
+    setCart(prev => prev.map(item =>
+      item.configurationKey === configurationKey
+        ? { ...item, quantity: Math.max(1, item.quantity + delta) }
+        : item
+    ));
+  };
+
+  const removeFromCart = (configurationKey: string) => {
+    setCart(prev => prev.filter(item => item.configurationKey !== configurationKey));
+  };
+
+  const updateRemark = (configurationKey: string, remark: string) => {
+    setCart(prev => prev.map(item =>
+      item.configurationKey === configurationKey ? { ...item, remark } : item
+    ));
+  };
+
+  const toggleSmartRemark = (configurationKey: string, presetName: string, option: string) => {
+    setCart(prev => prev.map(item => {
+      if (item.configurationKey === configurationKey) {
+        // Find the preset definition to check type (single vs multiple)
+        const categoryId = item.category_id;
+        const category = categories.find(c => c.id === categoryId);
+        const preset = category?.remark_presets?.find((p: any) => p.name === presetName);
+
+        const currentSelections: string[] = (item.selectedRemarks?.[presetName] as string[]) || [];
+        let newSelectionsForPreset: string[];
+
+        if (preset?.type === 'single') {
+          // Radio behavior
+          if (currentSelections.includes(option)) {
+            newSelectionsForPreset = []; // Toggle off
+          } else {
+            newSelectionsForPreset = [option]; // Switch to new
+          }
+        } else {
+          // Checkbox behavior (default if type missing)
+          if (currentSelections.includes(option)) {
+            newSelectionsForPreset = currentSelections.filter(opt => opt !== option);
+          } else {
+            newSelectionsForPreset = [...currentSelections, option];
+          }
+        }
+
+        const newAllSelections = { ...item.selectedRemarks, [presetName]: newSelectionsForPreset };
+
+        const remarkStr = Object.entries(newAllSelections)
+          .map(([k, v]) => {
+            const vals = (v as string[]);
+            if (vals.length === 0) return null;
+            return `[${k}: ${vals.join(', ')}]`;
+          })
+          .filter(Boolean)
+          .join(' ');
+
+        return { ...item, selectedRemarks: newAllSelections, smartRemarkLabel: remarkStr };
+      }
+      return item;
+    }));
+  };
+
+  const handlePlaceOrder = async () => {
+    setActiveStatus('submitting');
+    try {
+      const orderItems = cart.map(item => {
+        // Calculate base price (size or product price) - for reference only
+        let basePrice = 0;
+        if (item.selectedSize) {
+          basePrice = formatPrice(item.selectedSize.final_price || item.selectedSize.base_price);
+        } else if (item.pricing?.effective_price !== undefined) {
+          basePrice = formatPrice(item.pricing.effective_price);
+        } else {
+          basePrice = formatPrice(item.pricing?.branch_product_price || item.pricing?.product_base_price || 0);
+        }
+
+        // Calculate modifiers price
+        const modifiersPrice = item.selectedModifiers?.reduce((total: number, mod: any) =>
+          total + formatPrice(mod.price), 0) || 0;
+
+        // Build remark from smart remarks and custom remark
+        const smartRemark = item.selectedRemarks ?
+          Object.entries(item.selectedRemarks).map(([key, value]) => {
+            const vals = (value as string[]);
+            if (vals.length === 0) return null;
+            return `[${key}: ${vals.join(', ')}]`;
+          }).filter(Boolean).join(' ') : '';
+        const finalRemark = `${smartRemark} ${item.customRemark || ''}`.trim();
+
+        // Prepare selected_modifiers as array of IDs
+        const selectedModifierIds = item.selectedModifiers?.map((mod: any) => mod.id) || [];
+
+        return {
+          product_id: item.id,
+          quantity: item.quantity,
+          size_id: item.selectedSize?.id || null, // Send only size_id (not the object)
+          selected_modifiers: selectedModifierIds,
+          remark: finalRemark,
+        };
+      });
+
+      console.log('Sending order items:', JSON.stringify(orderItems, null, 2));
+
+      const res = await api.post(`/public/menu/order/${token}`, {
+        items: orderItems
+      });
+
+      console.log('Order response:', res.data);
+
+      // Create a clean order object for local storage
+      const newOrder = {
+        id: res.data.order_id || Date.now(),
+        order_code: res.data.order_code || `${Date.now()}`,
+        items: cart.map(item => ({
+          ...item, // Spread all item properties including pricing, sizes, etc.
+          // Override simplified calculated fields if needed, or just let calculateItemPrice in Overlay handle it
+          item_total: calculateItemTotal(item)
+        })),
+        subtotal: cartTotal,
+        tax: branch?.tax_is_active ? cartTotal * ((branch?.tax_rate || 10) / 100) : 0,
+        total: branch?.tax_is_active ?
+          cartTotal + (cartTotal * ((branch?.tax_rate || 10) / 100)) :
+          cartTotal,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        branch_id: branch?.id,
+        table_number: branch?.table_number || '01'
+      };
+
+      // Update history in localStorage
+      const updatedHistory = [newOrder, ...orderHistory];
+      setOrderHistory(updatedHistory);
+      localStorage.setItem('order_history', JSON.stringify(updatedHistory));
+
+      // Add to pending orders for tracking
+      setPendingOrders(prev => [newOrder, ...prev]);
+
+      // Set active order for real-time tracking
+      setActiveOrderId(newOrder.id);
+      setActiveStatus('pending');
+
+      // Clear cart and close cart sheet
+      setCart([]);
+      setIsCartOpen(false);
+
+      // Show success toast
+      toast({
+        title: "Order Placed!",
+        description: `Order #${newOrder.order_code} has been submitted`,
+        duration: 3000,
+        className: "bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-100"
+      });
+
+    } catch (e: any) {
+      setActiveStatus('idle');
+
+      // Enhanced error handling
+      const errorMessage = e.response?.data?.message ||
+        e.response?.data?.error ||
+        "Please try again or contact staff";
+
+      // Log detailed error for debugging
+      console.error('Order submission error:', {
+        error: e,
+        response: e.response?.data,
+        orderItems: cart
+      });
+
+      toast({
+        variant: "destructive",
+        title: "Order Failed",
+        description: errorMessage,
+        duration: 5000
+      });
+    }
+  };
 
   const calculateItemTotal = (item: any): number => {
     // If item has stored unitPrice, use it (from ConfigurationModal)
     if (item.unitPrice !== undefined) {
       return item.unitPrice * item.quantity;
     }
-    
+
     // Fallback calculation for items without unitPrice
     let basePrice = 0;
     if (item.selectedSize) {
@@ -465,10 +499,10 @@ const handlePlaceOrder = async () => {
     } else {
       basePrice = formatPrice(item.pricing?.branch_product_price || item.pricing?.product_base_price || 0);
     }
-    
-    const modifierPrice = item.selectedModifiers?.reduce((total: number, modifier: any) => 
+
+    const modifierPrice = item.selectedModifiers?.reduce((total: number, modifier: any) =>
       total + formatPrice(modifier.price), 0) || 0;
-    
+
     return (basePrice + modifierPrice) * item.quantity;
   };
 
@@ -481,7 +515,7 @@ const handlePlaceOrder = async () => {
         setCollectedOrders(updatedCollectedOrders);
         localStorage.setItem('order_history', JSON.stringify(updatedCollectedOrders));
         setPendingOrders(prev => prev.filter(order => order.id !== activeOrderId));
-        
+
         toast({
           title: "Order Collected!",
           description: "Thank you for your order",
@@ -494,8 +528,8 @@ const handlePlaceOrder = async () => {
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
-                           p.short_description?.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.short_description?.toLowerCase().includes(search.toLowerCase());
       const matchesCat = activeCategory === 'all' || p.category_id === parseInt(activeCategory);
       return matchesSearch && matchesCat;
     });
@@ -508,68 +542,68 @@ const handlePlaceOrder = async () => {
   };
 
 
-const calculateItemPrices = (item: any) => {
-  let basePrice = 0;
-  let originalPrice = 0;
-  let discountAmount = 0;
-  
-  if (item.selectedSize) {
-    // Get both original and discounted prices
-    originalPrice = formatPrice(item.selectedSize.base_price);
-    basePrice = formatPrice(item.selectedSize.final_price || item.selectedSize.base_price);
-    
-    // Calculate discount amount
-    if (item.selectedSize.has_active_discount && item.selectedSize.discount_percentage > 0) {
-      discountAmount = originalPrice - basePrice;
+  const calculateItemPrices = (item: any) => {
+    let basePrice = 0;
+    let originalPrice = 0;
+    let discountAmount = 0;
+
+    if (item.selectedSize) {
+      // Get both original and discounted prices
+      originalPrice = formatPrice(item.selectedSize.base_price);
+      basePrice = formatPrice(item.selectedSize.final_price || item.selectedSize.base_price);
+
+      // Calculate discount amount
+      if (item.selectedSize.has_active_discount && item.selectedSize.discount_percentage > 0) {
+        discountAmount = originalPrice - basePrice;
+      }
+    } else if (item.pricing?.effective_price !== undefined) {
+      originalPrice = formatPrice(item.pricing.branch_product_price || item.pricing.product_base_price);
+      basePrice = formatPrice(item.pricing.effective_price);
+
+      // Calculate discount amount
+      if (item.pricing.has_active_discount && item.pricing.discount_percentage > 0) {
+        discountAmount = originalPrice - basePrice;
+      }
+    } else {
+      basePrice = formatPrice(item.pricing?.branch_product_price || item.pricing?.product_base_price || 0);
+      originalPrice = basePrice;
     }
-  } else if (item.pricing?.effective_price !== undefined) {
-    originalPrice = formatPrice(item.pricing.branch_product_price || item.pricing.product_base_price);
-    basePrice = formatPrice(item.pricing.effective_price);
-    
-    // Calculate discount amount
-    if (item.pricing.has_active_discount && item.pricing.discount_percentage > 0) {
-      discountAmount = originalPrice - basePrice;
-    }
-  } else {
-    basePrice = formatPrice(item.pricing?.branch_product_price || item.pricing?.product_base_price || 0);
-    originalPrice = basePrice;
-  }
-  
-  const modifierPrice = item.selectedModifiers?.reduce((sum: number, modifier: any) => 
-    sum + formatPrice(modifier.price), 0) || 0;
-  
-  return {
-    basePrice,
-    originalPrice,
-    discountAmount,
-    modifierPrice,
-    totalPerItem: basePrice + modifierPrice,
-    originalPerItem: originalPrice + modifierPrice
+
+    const modifierPrice = item.selectedModifiers?.reduce((sum: number, modifier: any) =>
+      sum + formatPrice(modifier.price), 0) || 0;
+
+    return {
+      basePrice,
+      originalPrice,
+      discountAmount,
+      modifierPrice,
+      totalPerItem: basePrice + modifierPrice,
+      originalPerItem: originalPrice + modifierPrice
+    };
   };
-};
 
 
 
-// Update the cartTotal calculation
-const cartTotal = useMemo(() => {
-  return cart.reduce((total, item) => {
-    const prices = calculateItemPrices(item);
-    return total + (prices.totalPerItem * item.quantity);
-  }, 0);
-}, [cart]);
+  // Update the cartTotal calculation
+  const cartTotal = useMemo(() => {
+    return cart.reduce((total, item) => {
+      const prices = calculateItemPrices(item);
+      return total + (prices.totalPerItem * item.quantity);
+    }, 0);
+  }, [cart]);
 
-// Update the original subtotal calculation
-const originalSubtotal = useMemo(() => {
-  return cart.reduce((total, item) => {
-    const prices = calculateItemPrices(item);
-    return total + (prices.originalPerItem * item.quantity);
-  }, 0);
-}, [cart]);
+  // Update the original subtotal calculation
+  const originalSubtotal = useMemo(() => {
+    return cart.reduce((total, item) => {
+      const prices = calculateItemPrices(item);
+      return total + (prices.originalPerItem * item.quantity);
+    }, 0);
+  }, [cart]);
 
-// Calculate total discount
-const totalDiscount = useMemo(() => {
-  return originalSubtotal - cartTotal;
-}, [originalSubtotal, cartTotal]);
+  // Calculate total discount
+  const totalDiscount = useMemo(() => {
+    return originalSubtotal - cartTotal;
+  }, [originalSubtotal, cartTotal]);
 
 
   const primaryColor = branch?.primary_color || '#3b82f6';
@@ -579,10 +613,10 @@ const totalDiscount = useMemo(() => {
   if (loading) return (
     <div className="h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
       <div className="w-full max-w-xs h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-6">
-        <motion.div 
-          initial={{ width: 0 }} 
-          animate={{ width: `${progress}%` }} 
-          className="h-full bg-primary" 
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${progress}%` }}
+          className="h-full bg-primary"
           style={{ backgroundColor: primaryColor }}
         />
       </div>
@@ -597,7 +631,8 @@ const totalDiscount = useMemo(() => {
   return (
     <div className={`min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 text-slate-900 dark:text-slate-100 transition-colors duration-200 ${branch?.font_family}`}>
       {/* Dynamic Theme CSS */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         :root { 
           --primary: ${primaryColor};
           --primary-rgb: ${(() => {
@@ -614,18 +649,18 @@ const totalDiscount = useMemo(() => {
       `}} />
 
       {/* Order Status Overlay */}
-{activeStatus !== 'idle' && activeStatus !== 'submitting' && (
-  <OrderStatusOverlay
-    activeStatus={activeStatus}
-    currentAnimation={ANIMATIONS[activeStatus as keyof typeof ANIMATIONS]}
-    primaryColor={primaryColor}
-    onOrderCollected={handleOrderCollected}
-    onClose={() => setActiveStatus('idle')}
-    order={activeOrderId}
-    cart={cart} // Pass current cart
-    branch={branch} // Pass branch info
-  />
-)}
+      {activeStatus !== 'idle' && activeStatus !== 'submitting' && (
+        <OrderStatusOverlay
+          activeStatus={activeStatus}
+          currentAnimation={ANIMATIONS[activeStatus as keyof typeof ANIMATIONS]}
+          primaryColor={primaryColor}
+          onOrderCollected={handleOrderCollected}
+          onClose={() => setActiveStatus('idle')}
+          order={pendingOrders.find(o => o.id === activeOrderId) || orderHistory.find(o => o.id === activeOrderId)}
+          cart={cart} // Pass current cart
+          branch={branch} // Pass branch info
+        />
+      )}
 
       {/* Header */}
       <Header
@@ -703,21 +738,21 @@ const totalDiscount = useMemo(() => {
 
           {/* Empty State */}
           {filteredProducts.length === 0 && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="col-span-full py-10 md:py-16 text-center"
             >
               <div className="relative max-w-md mx-auto px-4">
-                <div 
+                <div
                   className="h-16 w-16 md:h-24 md:w-24 mx-auto rounded-full flex items-center justify-center mb-4"
-                  style={{ 
+                  style={{
                     backgroundColor: `${primaryColor}10`,
                   }}
                 >
                   <Search className="h-8 w-8 md:h-12 md:w-12" style={{ color: primaryColor }} />
                 </div>
-                <h3 
+                <h3
                   className="text-lg md:text-xl font-bold mb-2"
                   style={{ color: primaryColor }}
                 >
@@ -733,7 +768,7 @@ const totalDiscount = useMemo(() => {
                       setActiveCategory('all');
                     }}
                     className="rounded-lg px-4 py-2 text-sm md:text-base"
-                    style={{ 
+                    style={{
                       backgroundColor: primaryColor,
                       background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
                     }}
@@ -779,7 +814,7 @@ const totalDiscount = useMemo(() => {
               size="lg"
               onClick={() => setIsCartOpen(true)}
               className="h-14 w-14 rounded-full text-white shadow-lg"
-              style={{ 
+              style={{
                 backgroundColor: primaryColor,
                 background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
               }}
@@ -787,7 +822,7 @@ const totalDiscount = useMemo(() => {
               <ShoppingBag className="h-6 w-6" />
             </Button>
             {cart.length > 0 && (
-              <span 
+              <span
                 className="absolute -top-1 -right-1 h-6 w-6 rounded-full text-xs text-white font-bold flex items-center justify-center border-2 border-white dark:border-slate-900"
                 style={{ backgroundColor: accentColor }}
               >
@@ -821,40 +856,40 @@ const totalDiscount = useMemo(() => {
       </nav>
 
       {/* Configuration Modal */}
-<ConfigurationModal
-  product={configuringProduct}
-  isOpen={!!configuringProduct}
-  onClose={() => {
-    setConfiguringProduct(null);
-    setSelectedRemarksForConfiguringProduct({});
-  }}
-  selectedSize={selectedSize}
-  selectedModifiers={selectedModifiers}
-  customRemark={customRemark}
-  selectedRemarks={selectedRemarksForConfiguringProduct}
-  remarkPresets={configuringProduct?.category_id ? 
-    categories.find(c => c.id === configuringProduct.category_id)?.remark_presets || [] 
-    : []}
-  onSizeChange={setSelectedSize}
-  onModifierToggle={(modifierId) => {
-    setSelectedModifiers(prev => 
-      prev.includes(modifierId) 
-        ? prev.filter(id => id !== modifierId)
-        : [...prev, modifierId]
-    );
-  }}
-  onRemarkChange={setCustomRemark}
-  onRemarkPresetChange={(presetName, option) => {
-    setSelectedRemarksForConfiguringProduct(prev => ({
-      ...prev,
-      [presetName]: option
-    }));
-  }}
-  onAddToCart={(product, size, modifiers, remark, totalPrice) => {
-    addToCart(product, size, modifiers, remark, totalPrice);
-    setSelectedRemarksForConfiguringProduct({});
-  }}
-/>
+      <ConfigurationModal
+        product={configuringProduct}
+        isOpen={!!configuringProduct}
+        onClose={() => {
+          setConfiguringProduct(null);
+          setSelectedRemarksForConfiguringProduct({});
+        }}
+        selectedSize={selectedSize}
+        selectedModifiers={selectedModifiers}
+        customRemark={customRemark}
+        selectedRemarks={selectedRemarksForConfiguringProduct}
+        remarkPresets={configuringProduct?.category_id ?
+          categories.find(c => c.id === configuringProduct.category_id)?.remark_presets || []
+          : []}
+        onSizeChange={setSelectedSize}
+        onModifierToggle={(modifierId) => {
+          setSelectedModifiers(prev =>
+            prev.includes(modifierId)
+              ? prev.filter(id => id !== modifierId)
+              : [...prev, modifierId]
+          );
+        }}
+        onRemarkChange={setCustomRemark}
+        onRemarkPresetChange={(presetName, option) => {
+          setSelectedRemarksForConfiguringProduct(prev => ({
+            ...prev,
+            [presetName]: option
+          }));
+        }}
+        onAddToCart={(product, size, modifiers, remark, totalPrice) => {
+          addToCart(product, size, modifiers, remark, totalPrice);
+          setSelectedRemarksForConfiguringProduct({});
+        }}
+      />
 
       {/* Cart Sheet */}
       <CartSheet

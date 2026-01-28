@@ -50,7 +50,7 @@ const HistorySheet = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-full sm:max-w-md p-0">
+      <SheetContent side="right" className="w-full sm:max-w-md p-0 [&>button]:hidden">
         <div className="h-full flex flex-col">
           <div
             className="p-6 border-b"

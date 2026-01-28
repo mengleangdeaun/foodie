@@ -427,7 +427,7 @@ const getBulkActionLabel = (action: string) => {
             Back
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{product?.name} Size Pricing </h1>
+            <h1 className="text-3xl font-bold tracking-tight">{product?.name}</h1>
             <p className="text-muted-foreground">
               • Base Price: ${product?.base_price?.toFixed(2)}
               {product?.category_name && ` • Category: ${product.category_name}`}
@@ -520,7 +520,7 @@ const getBulkActionLabel = (action: string) => {
                   onCheckedChange={handleSelectAll}
                   id="select-all"
                 />
-                <Label htmlFor="select-all" className="text-sm cursor-pointer">
+                <Label htmlFor="select-all" className="text-sm mb-0 cursor-pointer">
                   {selectedSizes.length > 0 
                     ? `${selectedSizes.length} selected` 
                     : 'Select all'}
@@ -529,7 +529,7 @@ const getBulkActionLabel = (action: string) => {
               
               <div className="flex items-center gap-2 p-2 rounded-md border">
                 <Filter className="h-4 w-4 text-muted-foreground" />
-                <Label htmlFor="filter-available" className="text-sm cursor-pointer">
+                <Label htmlFor="filter-available" className="text-sm mb-0 cursor-pointer">
                   Available Only
                 </Label>
                 <Switch

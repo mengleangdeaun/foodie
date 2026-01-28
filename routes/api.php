@@ -85,6 +85,7 @@ Route::middleware('auth:sanctum')->group(function () {
     |----------------------------------------------------------------------
     */
     Route::prefix('super-admin')->middleware('role:super_admin')->group(function () {
+        Route::get('/dashboard/stats', [App\Http\Controllers\SuperAdmin\DashboardController::class, 'index']);
         Route::get('/restaurants', [TenantController::class, 'index']);
         Route::post('/onboard-restaurant', [TenantController::class, 'store']);
         Route::post('/tenants/{id}/approve', [TenantController::class, 'approve']);
@@ -127,6 +128,7 @@ Route::middleware('auth:sanctum')->group(function () {
          */
         Route::middleware('role:owner')->group(function () {
 
+            Route::get('/owner/dashboard', [App\Http\Controllers\Owner\OwnerDashboardController::class, 'index']);
             Route::get('/branches/schedules', [BranchController::class, 'getSchedules']);
             Route::apiResource('branches', BranchController::class);
             Route::post('branches/{id}/clone', [BranchController::class, 'clone']);

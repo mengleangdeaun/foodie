@@ -150,10 +150,6 @@ const ProductCard = ({ product, branch, onAddToCart }: ProductCardProps) => {
           {product.name}
         </h3>
 
-        <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 line-clamp-2 mb-3 min-h-[2.5rem] leading-relaxed">
-          {product.short_description || "Delicious dish with premium ingredients"}
-        </p>
-
         {/* Price Display - POS Style */}
         <div className="mb-4 space-y-2">
           {/* For products with sizes */}

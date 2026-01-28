@@ -1,31 +1,32 @@
 import { useEffect, useState } from 'react';
 import api from '@/util/api';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
+import { useNavigate } from 'react-router-dom';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
 } from "@/components/ui/card";
 import TimeRangePicker from "@/components/ui/time-range-picker";
 import TimePicker from "@/components/ui/time-picker";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import ConfirmationModal from "@/components/ConfirmationModal"; 
+import ConfirmationModal from "@/components/ConfirmationModal";
 import DeleteConfirmModal from '@/components/DeleteConfirmModal';
 import { Copy } from "lucide-react";
-import { 
-  Plus, 
-  MapPin, 
-  Store, 
-  Pencil, 
-  Send, 
-  Loader2, 
-  Clock, 
-  Users, 
-  Hash, 
-  Mail, 
+import {
+  Plus,
+  MapPin,
+  Store,
+  Pencil,
+  Send,
+  Loader2,
+  Clock,
+  Users,
+  Hash,
+  Mail,
   Phone,
   Globe,
   Settings,
@@ -34,26 +35,27 @@ import {
   Shield,
   Building2,
   Calendar,
-  QrCode, 
+  QrCode,
   Percent,
   MoreVertical,
   Trash2,
   CircleCheckBig,
-  X
+  X,
+  FileText
 } from "lucide-react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
 } from "@/components/ui/dialog";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
 } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,6 +77,7 @@ import { PaintBucket, ImageIcon } from "lucide-react";
 
 
 const OwnerBranches = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -84,8 +87,8 @@ const OwnerBranches = () => {
   const [activeTab, setActiveTab] = useState("general");
 
   // Add these new states
-const [openAppearanceDialog, setOpenAppearanceDialog] = useState(false);
-const [branchForAppearance, setBranchForAppearance] = useState<any>(null);
+  const [openAppearanceDialog, setOpenAppearanceDialog] = useState(false);
+  const [branchForAppearance, setBranchForAppearance] = useState<any>(null);
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
   const [branchToClone, setBranchToClone] = useState<any>(null);
   const [isCloning, setIsCloning] = useState(false);
@@ -95,33 +98,33 @@ const [branchForAppearance, setBranchForAppearance] = useState<any>(null);
   const [branchToDelete, setBranchToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-// Add this function
-const handleOpenAppearance = (branch: any) => {
-  setBranchForAppearance(branch);
-  setOpenAppearanceDialog(true);
-};
-  
+  // Add this function
+  const handleOpenAppearance = (branch: any) => {
+    setBranchForAppearance(branch);
+    setOpenAppearanceDialog(true);
+  };
+
   const [editingBranch, setEditingBranch] = useState<any>(null);
-  const [formData, setFormData] = useState<any>({ 
-    branch_name: '', 
-    location: '', 
-    is_active: true, 
+  const [formData, setFormData] = useState<any>({
+    branch_name: '',
+    location: '',
+    is_active: true,
     requires_cancel_note: true,
-    telegram_bot_token: '', 
-    telegram_chat_id: '', 
+    telegram_bot_token: '',
+    telegram_chat_id: '',
     telegram_topic_id: '',
-    telegram_bot_name: '', 
-    opening_days: '', 
-    opening_time: '', 
+    telegram_bot_name: '',
+    opening_days: '',
+    opening_time: '',
     closing_time: '',
-    contact_phone: '', 
-    contact_email: '', 
-    qr_payment_path: '', 
+    contact_phone: '',
+    contact_email: '',
+    qr_payment_path: '',
     qr_payment_file: null
   });
 
-  useEffect(() => { 
-    fetchBranches(); 
+  useEffect(() => {
+    fetchBranches();
   }, []);
 
   const fetchBranches = async () => {
@@ -135,18 +138,18 @@ const handleOpenAppearance = (branch: any) => {
         title: "Failed to load branches",
         description: "Please try again later"
       });
-    } finally { 
-      setLoading(false); 
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleOpenModal = (branch: any = null) => {
     if (branch) {
       setEditingBranch(branch);
-      setFormData({ 
-        branch_name: branch.branch_name, 
-        location: branch.location || '', 
-        is_active: branch.is_active == 1, 
+      setFormData({
+        branch_name: branch.branch_name,
+        location: branch.location || '',
+        is_active: branch.is_active == 1,
         requires_cancel_note: branch.requires_cancel_note == 1,
         telegram_bot_token: branch.telegram_bot_token || '',
         telegram_chat_id: branch.telegram_chat_id || '',
@@ -159,31 +162,36 @@ const handleOpenAppearance = (branch: any) => {
         contact_email: branch.contact_email || '',
         qr_payment_path: branch.qr_payment_path || '',
         qr_payment_file: null,
-        tax_is_active: branch.tax_is_active == 1, 
+        tax_is_active: branch.tax_is_active == 1,
         tax_name: branch.tax_name,
         tax_rate: branch.tax_rate || '',
+        website: branch.website || '',
+        is_support_visible: branch.is_support_visible == 1,
+        is_about_visible: branch.is_about_visible == 1,
       });
     } else {
       setEditingBranch(null);
-      setFormData({ 
-        branch_name: '', 
-        location: '', 
-        is_active: true, 
+      setFormData({
+        branch_name: '',
+        location: '',
+        is_active: true,
         requires_cancel_note: true,
-        telegram_bot_token: '', 
-        telegram_chat_id: '', 
+        telegram_bot_token: '',
+        telegram_chat_id: '',
         telegram_topic_id: '',
-        telegram_bot_name: '', 
-        opening_days: '', 
-        opening_time: '', 
+        telegram_bot_name: '',
+        opening_days: '',
+        opening_time: '',
         closing_time: '',
-        contact_phone: '', 
-        contact_email: '', 
-        qr_payment_path: '', 
+        contact_phone: '',
+        contact_email: '',
+        qr_payment_path: '',
         qr_payment_file: null,
         tax_is_active: true,
         tax_name: '',
         tax_rate: '',
+        website: '',
+        is_about_visible: true,
       });
     }
     setActiveTab("general");
@@ -211,13 +219,13 @@ const handleOpenAppearance = (branch: any) => {
       if (editingBranch) {
         data.append('_method', 'PUT');
         await api.post(`/admin/branches/${editingBranch.id}`, data);
-        toast({ 
+        toast({
           title: "Branch Updated",
           description: `${formData.branch_name} has been updated successfully`
         });
       } else {
         await api.post('/admin/branches', data);
-        toast({ 
+        toast({
           title: "Branch Created",
           description: `${formData.branch_name} has been added successfully`
         });
@@ -225,13 +233,13 @@ const handleOpenAppearance = (branch: any) => {
       setOpenDialog(false);
       fetchBranches();
     } catch (error: any) {
-      toast({ 
-        variant: "destructive", 
+      toast({
+        variant: "destructive",
         title: "Operation Failed",
         description: error.response?.data?.message || "Please check your input and try again"
       });
-    } finally { 
-      setSubmitting(false); 
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -244,7 +252,7 @@ const handleOpenAppearance = (branch: any) => {
       });
       return;
     }
-    
+
     if (!formData.telegram_bot_token) {
       toast({
         variant: "destructive",
@@ -253,27 +261,27 @@ const handleOpenAppearance = (branch: any) => {
       });
       return;
     }
-    
+
     setTestingToken(true);
     try {
       const res = await api.post(`/admin/branches/${editingBranch.id}/test-telegram`, {
         telegram_bot_token: formData.telegram_bot_token
       });
-      toast({ 
-        title: "Connection Successful!", 
-        description: res.data.message 
+      toast({
+        title: "Connection Successful!",
+        description: res.data.message
       });
       if (res.data.bot_name) {
         setFormData((p: any) => ({ ...p, telegram_bot_name: res.data.bot_name }));
       }
     } catch (error: any) {
-      toast({ 
-        variant: "destructive", 
+      toast({
+        variant: "destructive",
         title: "Connection Failed",
         description: error.response?.data?.message || "Could not connect to Telegram"
       });
-    } finally { 
-      setTestingToken(false); 
+    } finally {
+      setTestingToken(false);
     }
   };
 
@@ -341,7 +349,7 @@ const handleOpenAppearance = (branch: any) => {
             Manage your restaurant locations and their configurations
           </p>
         </div>
-        <Button 
+        <Button
           onClick={() => handleOpenModal()}
           className="gap-2"
         >
@@ -380,142 +388,150 @@ const handleOpenAppearance = (branch: any) => {
           </div>
         ) : (
           branches.map((branch: any) => (
-          <Card key={branch.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-  <CardHeader className="pb-3">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Store className="h-5 w-5 text-primary" />
+            <Card key={branch.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Store className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">{branch.branch_name}</CardTitle>
+                      <CardDescription className="flex items-center gap-1 text-xs">
+                        <MapPin className="h-3 w-3" />
+                        {branch.location || "No address"}
+                      </CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-lg">{branch.branch_name}</CardTitle>
-                    <CardDescription className="flex items-center gap-1 text-xs">
-                      <MapPin className="h-3 w-3" />
-                      {branch.location || "No address"}
-                    </CardDescription>
+
+                  <div className="flex items-center gap-1">
+                    <Badge variant={branch.is_active == 1 ? "default" : "secondary"}>
+                      {branch.is_active == 1 ? (
+                        <span className="flex items-center gap-1">
+                          <CircleCheckBig className="w-4 h-4" />
+                          Active
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <X className="w-4 h-4" />
+                          Inactive
+                        </span>
+                      )}
+                    </Badge>
+
+
+                    {/* Three-Dot Menu for Clone and Delete */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenClone(branch)}>
+                          <Copy className="mr-2 h-4 w-4" />
+                          Clone Branch
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => handleOpenDelete(branch)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Branch
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-1">
-              <Badge variant={branch.is_active == 1 ? "default" : "secondary"}>
-                {branch.is_active == 1 ? (
-                  <span className="flex items-center gap-1">
-                    <CircleCheckBig className="w-4 h-4" />
-                    Active
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1">
-                    <X className="w-4 h-4" />
-                    Inactive
-                  </span>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {branch.telegram_bot_name && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Bell className="h-3 w-3 text-green-500" />
+                    <span className="text-muted-foreground">
+                      Telegram: @{branch.telegram_bot_name}
+                    </span>
+                  </div>
                 )}
-              </Badge>
+                {(branch.opening_time || branch.closing_time) && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="h-3 w-3 text-blue-500" />
+                    <span className="text-muted-foreground">
+                      {branch.opening_time} - {branch.closing_time}
+                    </span>
+                  </div>
+                )}
+                {branch.contact_phone && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-3 w-3 text-purple-500" />
+                    <span className="text-muted-foreground">
+                      {branch.contact_phone}
+                    </span>
+                  </div>
+                )}
 
-                  
-                  {/* Three-Dot Menu for Clone and Delete */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleOpenClone(branch)}>
-                        <Copy className="mr-2 h-4 w-4" />
-                        Clone Branch
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-destructive focus:text-destructive" 
-                        onClick={() => handleOpenDelete(branch)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Branch
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                {/* Branch Appearance Preview */}
+                {(branch.primary_color || branch.logo_url) && (
+                  <div className="pt-2 border-t">
+                    <div className="flex items-center gap-2 mb-2">
+                      <PaintBucket className="h-3 w-3 text-amber-500" />
+                      <span className="text-xs text-muted-foreground">Custom Appearance</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {branch.primary_color && (
+                        <div className="flex items-center gap-1">
+                          <div
+                            className="h-4 w-4 rounded-sm border"
+                            style={{ backgroundColor: branch.primary_color }}
+                          />
+                          <span className="text-xs text-muted-foreground">Primary Color</span>
+                        </div>
+                      )}
+                      {branch.primary_color && (
+                        <div className="flex items-center gap-1">
+                          <div
+                            className="h-4 w-4 rounded-sm border"
+                            style={{ backgroundColor: branch.secondary_color }}
+                          />
+                          <span className="text-xs text-muted-foreground">Secondary Color</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+
+
+
+              <CardFooter className="border-t pt-4">
+                <div className="grid grid-cols-2 gap-2 w-full">
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => handleOpenModal(branch)}
+                  >
+                    <Settings className="h-4 w-4" />
+                    Settings
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => handleOpenAppearance(branch)}
+                  >
+                    <PaintBucket className="h-4 w-4" />
+                    Appearance
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="gap-2 col-span-2"
+                    onClick={() => navigate(`/owner/branches/${branch.id}/content`)}
+                  >
+                    <FileText className="h-4 w-4" />
+                    Manage Content
+                  </Button>
                 </div>
-              </div>
-            </CardHeader>
-  <CardContent className="space-y-3">
-    {branch.telegram_bot_name && (
-      <div className="flex items-center gap-2 text-sm">
-        <Bell className="h-3 w-3 text-green-500" />
-        <span className="text-muted-foreground">
-          Telegram: @{branch.telegram_bot_name}
-        </span>
-      </div>
-    )}
-    {(branch.opening_time || branch.closing_time) && (
-      <div className="flex items-center gap-2 text-sm">
-        <Clock className="h-3 w-3 text-blue-500" />
-        <span className="text-muted-foreground">
-          {branch.opening_time} - {branch.closing_time}
-        </span>
-      </div>
-    )}
-    {branch.contact_phone && (
-      <div className="flex items-center gap-2 text-sm">
-        <Phone className="h-3 w-3 text-purple-500" />
-        <span className="text-muted-foreground">
-          {branch.contact_phone}
-        </span>
-      </div>
-    )}
-    
-    {/* Branch Appearance Preview */}
-    {(branch.primary_color || branch.logo_url) && (
-      <div className="pt-2 border-t">
-        <div className="flex items-center gap-2 mb-2">
-          <PaintBucket className="h-3 w-3 text-amber-500" />
-          <span className="text-xs text-muted-foreground">Custom Appearance</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {branch.primary_color && (
-            <div className="flex items-center gap-1">
-              <div 
-                className="h-4 w-4 rounded-sm border" 
-                style={{ backgroundColor: branch.primary_color }}
-              />
-              <span className="text-xs text-muted-foreground">Primary Color</span>
-            </div>
-          )}
-          {branch.primary_color && (
-            <div className="flex items-center gap-1">
-              <div 
-                className="h-4 w-4 rounded-sm border" 
-                style={{ backgroundColor: branch.secondary_color }}
-              />
-              <span className="text-xs text-muted-foreground">Secondary Color</span>
-            </div>
-          )}
-        </div>
-      </div>
-    )}
-  </CardContent>
-
-
-
-<CardFooter className="border-t pt-4">
-              <div className="grid grid-cols-2 gap-2 w-full">
-                <Button 
-                  variant="outline" 
-                  className="gap-2"
-                  onClick={() => handleOpenModal(branch)}
-                >
-                  <Settings className="h-4 w-4" />
-                  Settings
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="gap-2"
-                  onClick={() => handleOpenAppearance(branch)}
-                >
-                  <PaintBucket className="h-4 w-4" />
-                  Appearance
-                </Button>
-              </div>
-            </CardFooter>
-</Card>
+              </CardFooter>
+            </Card>
           ))
         )}
       </div>
@@ -528,7 +544,7 @@ const handleOpenAppearance = (branch: any) => {
               {editingBranch ? 'Edit Branch' : 'Add New Branch'}
             </DialogTitle>
             <DialogDescription>
-              {editingBranch 
+              {editingBranch
                 ? 'Update branch information and settings'
                 : 'Configure a new restaurant location'
               }
@@ -536,26 +552,26 @@ const handleOpenAppearance = (branch: any) => {
           </DialogHeader>
 
           <form onSubmit={handleSubmit}>
-            <Tabs 
-              value={activeTab} 
+            <Tabs
+              value={activeTab}
               onValueChange={setActiveTab}
               className="w-full"
             >
-            <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="general" className="gap-1">
-                <Settings className="h-3 w-3 mr-2" />
-                General
-            </TabsTrigger>
-              <TabsTrigger value="business-hour" className="gap-1">
-                <Clock className="h-3 w-3 mr-2" />
-                Business Hour
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-1">
-                <Bell className="h-3 w-3 mr-2" />
-                Notifications
-            </TabsTrigger>
-            {/* Remove the Appearance tab from here */}
-            </TabsList>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="general" className="gap-1">
+                  <Settings className="h-3 w-3 mr-2" />
+                  General
+                </TabsTrigger>
+                <TabsTrigger value="business-hour" className="gap-1">
+                  <Clock className="h-3 w-3 mr-2" />
+                  Business Hour
+                </TabsTrigger>
+                <TabsTrigger value="notifications" className="gap-1">
+                  <Bell className="h-3 w-3 mr-2" />
+                  Notifications
+                </TabsTrigger>
+                {/* Remove the Appearance tab from here */}
+              </TabsList>
 
               <TabsContent value="general" className="space-y-6 pt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -564,7 +580,7 @@ const handleOpenAppearance = (branch: any) => {
                     <Input
                       id="branch_name"
                       value={formData.branch_name}
-                      onChange={e => setFormData({...formData, branch_name: e.target.value})}
+                      onChange={e => setFormData({ ...formData, branch_name: e.target.value })}
                       placeholder="Main Restaurant"
                       required
                     />
@@ -574,7 +590,7 @@ const handleOpenAppearance = (branch: any) => {
                     <Input
                       id="location"
                       value={formData.location}
-                      onChange={e => setFormData({...formData, location: e.target.value})}
+                      onChange={e => setFormData({ ...formData, location: e.target.value })}
                       placeholder="123 Street, City"
                     />
                   </div>
@@ -583,7 +599,7 @@ const handleOpenAppearance = (branch: any) => {
                     <Input
                       id="contact_phone"
                       value={formData.contact_phone}
-                      onChange={e => setFormData({...formData, contact_phone: e.target.value})}
+                      onChange={e => setFormData({ ...formData, contact_phone: e.target.value })}
                       placeholder="+855 123 456 789"
                     />
                   </div>
@@ -593,8 +609,18 @@ const handleOpenAppearance = (branch: any) => {
                       id="contact_email"
                       type="email"
                       value={formData.contact_email}
-                      onChange={e => setFormData({...formData, contact_email: e.target.value})}
+                      onChange={e => setFormData({ ...formData, contact_email: e.target.value })}
                       placeholder="contact@restaurant.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="website">Website</Label>
+                    <Input
+                      id="website"
+                      type="url"
+                      value={formData.website}
+                      onChange={e => setFormData({ ...formData, website: e.target.value })}
+                      placeholder="https://restaurant.com"
                     />
                   </div>
                 </div>
@@ -604,42 +630,42 @@ const handleOpenAppearance = (branch: any) => {
                     <Input
                       id="tax_name"
                       value={formData.tax_name}
-                      onChange={e => setFormData({...formData, tax_name: e.target.value})}
+                      onChange={e => setFormData({ ...formData, tax_name: e.target.value })}
                       placeholder="VAT"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="tax_name">Tax Rate(%)</Label>
                     <div className="relative">
-                      <Input 
-                          id="tax_rate"
-                          type="number" 
-                          min="0"
-                          max="100"
-                          step="0.01" 
-                          required 
-                          value={formData.tax_rate} 
-                          onChange={e => setFormData({...formData, tax_rate: e.target.value})}
-                          placeholder="0.00"
-                          className="pr-10"
+                      <Input
+                        id="tax_rate"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        required
+                        value={formData.tax_rate}
+                        onChange={e => setFormData({ ...formData, tax_rate: e.target.value })}
+                        placeholder="0.00"
+                        className="pr-10"
                       />
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      <Percent className="h-4 w-4" />
+                        <Percent className="h-4 w-4" />
                       </div>
-                      </div>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="tax_name">Tax Status</Label>
-                      <Switch
-                        checked={formData.tax_is_active}
-                        onCheckedChange={v => setFormData({...formData, tax_is_active: v})}
-                      />
+                    <Switch
+                      checked={formData.tax_is_active}
+                      onCheckedChange={v => setFormData({ ...formData, tax_is_active: v })}
+                    />
                   </div>
                 </div>
 
 
                 <Separator />
-                
+
 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -658,7 +684,7 @@ const handleOpenAppearance = (branch: any) => {
                       </div>
                       <Switch
                         checked={formData.is_active}
-                        onCheckedChange={v => setFormData({...formData, is_active: v})}
+                        onCheckedChange={v => setFormData({ ...formData, is_active: v })}
                       />
                     </div>
                     <div className="flex items-center justify-between p-4 rounded-lg border">
@@ -670,7 +696,7 @@ const handleOpenAppearance = (branch: any) => {
                       </div>
                       <Switch
                         checked={formData.requires_cancel_note}
-                        onCheckedChange={v => setFormData({...formData, requires_cancel_note: v})}
+                        onCheckedChange={v => setFormData({ ...formData, requires_cancel_note: v })}
                       />
                     </div>
                   </div>
@@ -723,7 +749,7 @@ const handleOpenAppearance = (branch: any) => {
                         id="telegram_bot_token"
                         type="password"
                         value={formData.telegram_bot_token}
-                        onChange={e => setFormData({...formData, telegram_bot_token: e.target.value})}
+                        onChange={e => setFormData({ ...formData, telegram_bot_token: e.target.value })}
                         placeholder="1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ"
                         className="font-mono"
                       />
@@ -734,7 +760,7 @@ const handleOpenAppearance = (branch: any) => {
                         <Input
                           id="telegram_chat_id"
                           value={formData.telegram_chat_id}
-                          onChange={e => setFormData({...formData, telegram_chat_id: e.target.value})}
+                          onChange={e => setFormData({ ...formData, telegram_chat_id: e.target.value })}
                           placeholder="-1001234567890"
                         />
                       </div>
@@ -743,7 +769,7 @@ const handleOpenAppearance = (branch: any) => {
                         <Input
                           id="telegram_topic_id"
                           value={formData.telegram_topic_id}
-                          onChange={e => setFormData({...formData, telegram_topic_id: e.target.value})}
+                          onChange={e => setFormData({ ...formData, telegram_topic_id: e.target.value })}
                           placeholder="123"
                         />
                       </div>
@@ -754,9 +780,9 @@ const handleOpenAppearance = (branch: any) => {
                     <div className="mt-4 p-3 rounded-lg bg-muted">
                       <p className="text-sm text-muted-foreground">
                         Bot Link:{' '}
-                        <a 
-                          href={generateTelegramLink()} 
-                          target="_blank" 
+                        <a
+                          href={generateTelegramLink()}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="text-primary hover:underline"
                         >
@@ -769,41 +795,41 @@ const handleOpenAppearance = (branch: any) => {
               </TabsContent>
 
 
-<TabsContent value="business-hour" className="space-y-6 pt-4"  >
+              <TabsContent value="business-hour" className="space-y-6 pt-4"  >
 
-  <div className="space-y-4">
-    
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="space-y-2">
-        <Label htmlFor="opening_days" className='flex gap-2' >
-        <Calendar className='h-4 w-4' />  Days Open</Label>
-        <Input
-          id="opening_days"
-          value={formData.opening_days}
-          onChange={e => setFormData({...formData, opening_days: e.target.value})}
-          placeholder="Monday - Sunday"
-        />
-      </div>
-    </div>
+                <div className="space-y-4">
 
-    <div className='col-span-2' >
-        <TimeRangePicker
-          startTime={formData.opening_time}
-          endTime={formData.closing_time}
-          onStartTimeChange={(value) => setFormData({...formData, opening_time: value})}
-          onEndTimeChange={(value) => setFormData({...formData, closing_time: value})}
-          label="Business Hours"
-          interval={15}
-          hourFormat="auto"
-          required
-          
-        />
-      </div> 
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="opening_days" className='flex gap-2' >
+                        <Calendar className='h-4 w-4' />  Days Open</Label>
+                      <Input
+                        id="opening_days"
+                        value={formData.opening_days}
+                        onChange={e => setFormData({ ...formData, opening_days: e.target.value })}
+                        placeholder="Monday - Sunday"
+                      />
+                    </div>
+                  </div>
 
-  </div>
+                  <div className='col-span-2' >
+                    <TimeRangePicker
+                      startTime={formData.opening_time}
+                      endTime={formData.closing_time}
+                      onStartTimeChange={(value) => setFormData({ ...formData, opening_time: value })}
+                      onEndTimeChange={(value) => setFormData({ ...formData, closing_time: value })}
+                      label="Business Hours"
+                      interval={15}
+                      hourFormat="auto"
+                      required
+
+                    />
+                  </div>
+
+                </div>
 
 
-</TabsContent>
+              </TabsContent>
 
             </Tabs>
 
@@ -837,22 +863,22 @@ const handleOpenAppearance = (branch: any) => {
         </DialogContent>
       </Dialog>
 
-<Dialog open={openAppearanceDialog} onOpenChange={setOpenAppearanceDialog}>
-  <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
-    
-    {branchForAppearance && (
-      <OwnerBranchAppearance 
-        branch={branchForAppearance} 
-        onUpdate={() => {
-          fetchBranches();
-          setOpenAppearanceDialog(false);
-        }} 
-      />
-    )}
-  </DialogContent>
-</Dialog>
+      <Dialog open={openAppearanceDialog} onOpenChange={setOpenAppearanceDialog}>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
 
-<ConfirmationModal
+          {branchForAppearance && (
+            <OwnerBranchAppearance
+              branch={branchForAppearance}
+              onUpdate={() => {
+                fetchBranches();
+                setOpenAppearanceDialog(false);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmationModal
         isOpen={isCloneModalOpen}
         onClose={() => setIsCloneModalOpen(false)}
         onConfirm={onConfirmClone}
@@ -863,16 +889,16 @@ const handleOpenAppearance = (branch: any) => {
       />
 
 
-<DeleteConfirmModal
+      <DeleteConfirmModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={onConfirmDelete}
         loading={isDeleting}
         title="Delete Branch?"
         description={
-            <span>
-                Are you sure? This will permanently delete <strong>{branchToDelete?.branch_name}</strong> and all its configurations.
-            </span>
+          <span>
+            Are you sure? This will permanently delete <strong>{branchToDelete?.branch_name}</strong> and all its configurations.
+          </span>
         }
       />
 

@@ -30,28 +30,33 @@ class POSController extends Controller
 
         // Get categories with remark presets for this branch
         $categories = Category::where('owner_id', $branch->owner_id)
-            ->with(['remarkPresets' => function($query) use ($branch) {
-                $query->whereHas('branches', function($q) use ($branch) {
-                    $q->where('branches.id', $branch->id);
-                });
-            }])
+            ->with([
+                'remarkPresets' => function ($query) use ($branch) {
+                    $query->whereHas('branches', function ($q) use ($branch) {
+                        $q->where('branches.id', $branch->id);
+                    });
+                }
+            ])
             ->get();
 
         // Get products with branch-specific pricing
         $products = Product::where('owner_id', $branch->owner_id)
             ->where('is_active', true)
-            ->whereHas('branches', function($query) use ($branch) {
+            ->whereHas('branches', function ($query) use ($branch) {
                 $query->where('branch_id', $branch->id)
-                      ->where('is_available', true); 
+                    ->where('is_available', true);
             })
             ->with([
-                'category', 
+                'category',
                 'tags',
                 'sizes',
-                'modifierGroups.modifiers' => function($q) {
+                'modifierGroups' => function ($q) {
+                    $q->where('is_active', true);
+                },
+                'modifierGroups.modifiers' => function ($q) {
                     $q->where('is_available', true);
                 },
-                'branches' => function($query) use ($branch) {
+                'branches' => function ($query) use ($branch) {
                     $query->where('branch_id', $branch->id);
                 }
             ])
@@ -59,7 +64,7 @@ class POSController extends Controller
             ->where('branch_product.branch_id', $branch->id)
             ->where('branch_product.is_available', true)
             ->select([
-                'products.*', 
+                'products.*',
                 'branch_product.branch_price',
                 'branch_product.discount_percentage as branch_discount_percentage',
                 'branch_product.has_active_discount as branch_has_active_discount',
@@ -74,29 +79,29 @@ class POSController extends Controller
             ->map(function ($product) use ($branch) {
                 $branchProduct = $product->branches->first();
                 $branchProductId = $product->branch_product_id;
-                
+
                 // Process sizes with branch-specific pricing
                 $sizesWithPricing = collect();
-                
+
                 if ($product->sizes->isNotEmpty()) {
                     // Get all branch_product_size records for this branch_product
                     $branchProductSizes = BranchProductSize::where('branch_product_id', $branchProductId)
                         ->whereIn('size_id', $product->sizes->pluck('id'))
                         ->get()
                         ->keyBy('size_id');
-                    
+
                     foreach ($product->sizes as $size) {
                         $branchProductSize = $branchProductSizes[$size->id] ?? null;
-                        
+
                         // Skip if branch_product_size exists and is_available = 0
                         if ($branchProductSize && !$branchProductSize->is_available) {
                             continue;
                         }
-                        
+
                         // DETERMINE PRICE
                         $effectivePrice = null;
                         $priceSource = 'product_base';
-                        
+
                         if ($branchProductSize) {
                             // Size-specific pricing exists
                             if ($branchProductSize->branch_size_price !== null) {
@@ -122,12 +127,12 @@ class POSController extends Controller
                                 $priceSource = 'product_base';
                             }
                         }
-                        
+
                         // DETERMINE DISCOUNT
                         $discountPercentage = 0;
                         $isDiscountActive = false;
                         $discountSource = 'none';
-                        
+
                         if ($branchProductSize) {
                             // Use branch_product_size discount settings
                             $discountPercentage = (float) $branchProductSize->discount_percentage;
@@ -139,13 +144,13 @@ class POSController extends Controller
                             $isDiscountActive = (bool) ($product->branch_has_active_discount ?? false);
                             $discountSource = 'branch_product';
                         }
-                        
+
                         // Calculate final price
                         $finalPrice = $effectivePrice;
                         if ($isDiscountActive && $discountPercentage > 0) {
                             $finalPrice = $effectivePrice - ($effectivePrice * ($discountPercentage / 100));
                         }
-                        
+
                         $sizesWithPricing->push([
                             'id' => $size->id,
                             'name' => $size->name,
@@ -159,47 +164,47 @@ class POSController extends Controller
                         ]);
                     }
                 }
-                
+
                 // Calculate product base price (for products without sizes)
                 $productBasePrice = $branchProduct->pivot->branch_price ?? $product->base_price;
                 $productDiscountPercentage = (float) ($product->branch_discount_percentage ?? 0);
                 $productHasActiveDiscount = (bool) ($product->branch_has_active_discount ?? false);
                 $productEffectivePrice = (float) $productBasePrice;
-                
+
                 if ($productHasActiveDiscount && $productDiscountPercentage > 0) {
                     $productEffectivePrice = (float) ($productBasePrice - ($productBasePrice * ($productDiscountPercentage / 100)));
                 }
-                
+
                 // Prepare modifier groups
                 $modifierGroups = $product->modifierGroups->map(function ($group) {
                     return [
-                        'id' => (int)$group->id,
+                        'id' => (int) $group->id,
                         'name' => $group->name,
                         'selection_type' => $group->selection_type,
-                        'min_selection' => (int)$group->min_selection,
-                        'max_selection' => $group->max_selection ? (int)$group->max_selection : null,
-                        'is_active' => (bool)$group->is_active,
+                        'min_selection' => (int) $group->min_selection,
+                        'max_selection' => $group->max_selection ? (int) $group->max_selection : null,
+                        'is_active' => (bool) $group->is_active,
                         'modifiers' => $group->modifiers->map(function ($modifier) {
                             return [
-                                'id' => (int)$modifier->id,
+                                'id' => (int) $modifier->id,
                                 'name' => $modifier->name,
-                                'price' => (float)$modifier->price,
-                                'is_available' => (bool)$modifier->is_available
+                                'price' => (float) $modifier->price,
+                                'is_available' => (bool) $modifier->is_available
                             ];
                         })
                     ];
                 });
-                
+
                 // Return product data
                 return [
-                    'id' => (int)$product->id,
+                    'id' => (int) $product->id,
                     'name' => $product->name,
-                    'category_id' => (int)$product->category_id,
+                    'category_id' => (int) $product->category_id,
                     'short_description' => $product->short_description,
                     'description' => $product->description,
                     'image_path' => $product->image_path,
                     'category' => $product->category ? [
-                        'id' => (int)$product->category->id,
+                        'id' => (int) $product->category->id,
                         'name' => $product->category->name
                     ] : null,
                     'sizes' => $sizesWithPricing->isEmpty() ? null : $sizesWithPricing,
@@ -210,20 +215,20 @@ class POSController extends Controller
                     'original_price' => round($productBasePrice, 2),
                     'has_discount' => $productHasActiveDiscount && $productDiscountPercentage > 0,
                     'discount_percentage' => $productDiscountPercentage,
-                    'is_popular' => (bool)$product->is_popular,
-                    'is_signature' => (bool)$product->is_signature,
-                    'is_chef_recommendation' => (bool)$product->is_chef_recommendation,
+                    'is_popular' => (bool) $product->is_popular,
+                    'is_signature' => (bool) $product->is_signature,
+                    'is_chef_recommendation' => (bool) $product->is_chef_recommendation,
                     'branch_specific' => true,
                     'pricing' => [
                         'product_base_price' => (float) $product->base_price,
                         'branch_product_price' => $branchProduct ? (float) $branchProduct->pivot->branch_price : null,
-                        'is_available' => (bool)($branchProduct->pivot->is_available ?? true),
+                        'is_available' => (bool) ($branchProduct->pivot->is_available ?? true),
                         'discount_percentage' => $productDiscountPercentage,
                         'has_active_discount' => $productHasActiveDiscount,
                         'effective_price' => (float) $productEffectivePrice,
-                        'is_popular' => (bool)($product->is_popular ?? false),
-                        'is_signature' => (bool)($product->is_signature ?? false),
-                        'is_chef_recommendation' => (bool)($product->is_chef_recommendation ?? false),
+                        'is_popular' => (bool) ($product->is_popular ?? false),
+                        'is_signature' => (bool) ($product->is_signature ?? false),
+                        'is_chef_recommendation' => (bool) ($product->is_chef_recommendation ?? false),
                     ],
                 ];
             });
@@ -235,176 +240,181 @@ class POSController extends Controller
         ]);
     }
 
-public function store(Request $request, TelegramService $telegram)
-{
-    $validator = Validator::make($request->all(), [
-        'branch_id' => 'required|exists:branches,id',
-        'order_type' => 'required|in:walk_in,delivery,takeaway',
-        'delivery_partner_id' => 'nullable|exists:delivery_partners,id',
-        'table_id' => 'nullable|exists:restaurant_tables,id',
-        'items' => 'required|array|min:1',
-        'items.*.product_id' => 'required|exists:products,id',
-        'items.*.quantity' => 'required|integer|min:1',
-        'items.*.selected_size' => 'nullable|array',
-        'items.*.selected_modifiers' => 'nullable|array',
-        'items.*.remark' => 'nullable|string',
-        // FIX: Allow the frontend to pass the 5% discount
-        'items.*.discount_percentage' => 'nullable|numeric|min:0|max:100', 
-        'order_discount_amount' => 'nullable|numeric|min:0',
-        'order_discount_percentage' => 'nullable|numeric|min:0|max:100',
-        'delivery_partner_discount' => 'nullable|numeric|min:0',
-    ]);
-
-    if ($validator->fails()) {
-        return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
-    }
-
-    return DB::transaction(function () use ($request, $telegram) {
-        $round = fn ($v) => round((float)$v, 2);
-        $branch = Branch::findOrFail($request->branch_id);
-        $taxRate = (float) ($branch->tax_rate ?? 0);
-        $taxIsActive = (bool) ($branch->tax_is_active ?? true);
-
-        $subtotal = 0;
-        $itemDiscountTotal = 0;
-
-        // --- Order Code Logic (Kept your original logic) ---
-        $yearDigit = now()->format('y')[1];
-        $months = ['A','B','C','D','E','F','G','H','I','J','K','L'];
-        $monthLetter = $months[intval(now()->format('m')) - 1]; 
-        $day = now()->format('d');
-        $seq = 1;
-        $orderCode = '';
-        for ($i = 0; $i < 1000; $i++) {
-            $seqFormatted = str_pad($seq, 3, '0', STR_PAD_LEFT);
-            $orderCodeCandidate = "$yearDigit$monthLetter$day$seqFormatted";
-            if (!Order::where('order_code', $orderCodeCandidate)->exists()) { $orderCode = $orderCodeCandidate; break; }
-            $seq++;
-        }
-
-        $order = Order::create([
-            'branch_id' => $request->branch_id,
-            'user_id' => Auth::id(),
-            'created_by' => auth()->id(),
-            'order_type' => $request->order_type,
-            'delivery_partner_id' => $request->delivery_partner_id,
-            'restaurant_table_id' => $request->table_id,
-            'status' => 'confirmed',
-            'subtotal' => 0,
-            'item_discount_total' => 0,
-            'order_level_discount' => 0,
-            'delivery_partner_discount' => $round($request->delivery_partner_discount ?? 0),
-            'order_discount_amount' => 0,
-            'tax_rate' => $taxRate,
-            'tax_amount' => 0,
-            'order_code' => $orderCode,
+    public function store(Request $request, TelegramService $telegram)
+    {
+        $validator = Validator::make($request->all(), [
+            'branch_id' => 'required|exists:branches,id',
+            'order_type' => 'required|in:walk_in,delivery,takeaway',
+            'delivery_partner_id' => 'nullable|exists:delivery_partners,id',
+            'table_id' => 'nullable|exists:restaurant_tables,id',
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.selected_size' => 'nullable|array',
+            'items.*.selected_modifiers' => 'nullable|array',
+            'items.*.remark' => 'nullable|string',
+            // FIX: Allow the frontend to pass the 5% discount
+            'items.*.discount_percentage' => 'nullable|numeric|min:0|max:100',
+            'order_discount_amount' => 'nullable|numeric|min:0',
+            'order_discount_percentage' => 'nullable|numeric|min:0|max:100',
+            'delivery_partner_discount' => 'nullable|numeric|min:0',
         ]);
 
-        foreach ($request->items as $item) {
-            $product = Product::findOrFail($item['product_id']);
-            $branchProduct = BranchProduct::where('branch_id', $branch->id)->where('product_id', $product->id)->firstOrFail();
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+        }
 
-            $basePrice = $branchProduct->branch_price ?? $product->base_price;
-            $discountPercentage = 0;
-            $hasActiveDiscount = false;
+        return DB::transaction(function () use ($request, $telegram) {
+            $round = fn($v) => round((float) $v, 2);
+            $branch = Branch::findOrFail($request->branch_id);
+            $taxRate = (float) ($branch->tax_rate ?? 0);
+            $taxIsActive = (bool) ($branch->tax_is_active ?? true);
 
-            // 1. Check for Size Override
-            $sizeId = $item['selected_size']['id'] ?? null;
-            $sizeName = null;
-            $branchProductSizeId = null;
+            $subtotal = 0;
+            $itemDiscountTotal = 0;
 
-            if ($sizeId) {
-                $branchProductSize = BranchProductSize::where('branch_product_id', $branchProduct->id)->where('size_id', $sizeId)->first();
-                if ($branchProductSize) {
-                    $basePrice = $branchProductSize->branch_size_price ?? $basePrice;
-                    if ($branchProductSize->is_discount_active) {
-                        $discountPercentage = $branchProductSize->discount_percentage;
-                        $hasActiveDiscount = true;
-                    }
-                    $branchProductSizeId = $branchProductSize->id;
-                    $sizeModel = Size::find($sizeId);
-                    $sizeName = $sizeModel ? $sizeModel->name : null;
+            // --- Order Code Logic (Kept your original logic) ---
+            $yearDigit = now()->format('y')[1];
+            $months = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+            $monthLetter = $months[intval(now()->format('m')) - 1];
+            $day = now()->format('d');
+            $seq = 1;
+            $orderCode = '';
+            for ($i = 0; $i < 1000; $i++) {
+                $seqFormatted = str_pad($seq, 3, '0', STR_PAD_LEFT);
+                $orderCodeCandidate = "$yearDigit$monthLetter$day$seqFormatted";
+                if (!Order::where('order_code', $orderCodeCandidate)->exists()) {
+                    $orderCode = $orderCodeCandidate;
+                    break;
                 }
-            } elseif ($branchProduct->has_active_discount) {
-                // Fix: Check product-level discount if no size is selected
-                $discountPercentage = $branchProduct->discount_percentage;
-                $hasActiveDiscount = true;
+                $seq++;
             }
 
-            // 2. Override with MANUAL discount from POS frontend
-            if (isset($item['discount_percentage']) && $item['discount_percentage'] > 0) {
-                $discountPercentage = $item['discount_percentage'];
-                $hasActiveDiscount = true;
-            }
-
-            // 3. Calculation
-            $modifierTotalPrice = 0;
-            $selectedModifiersData = [];
-            foreach ($item['selected_modifiers'] ?? [] as $modifierId) {
-                $modifier = Modifier::find($modifierId);
-                if ($modifier && $modifier->is_available) {
-                    $modifierTotalPrice += $modifier->price;
-                    $selectedModifiersData[] = ['id' => $modifier->id, 'name' => $modifier->name, 'price' => $modifier->price];
-                }
-            }
-
-            $itemSubtotal = $round(($basePrice + $modifierTotalPrice) * $item['quantity']);
-            $itemDiscount = $hasActiveDiscount ? $round(($basePrice * ($discountPercentage / 100)) * $item['quantity']) : 0;
-            $itemFinalPrice = $round($itemSubtotal - $itemDiscount);
-            $finalUnitPrice = $round($itemFinalPrice / $item['quantity']);
-
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $product->id,
-                'branch_product_size_id' => $branchProductSizeId,
-                'size_id' => $sizeId,
-                'size_name' => $sizeName,
-                'base_price' => $round($basePrice),
-                'original_product_price' => $round($basePrice),
-                'modifier_total_price' => $round($modifierTotalPrice),
-                'item_discount_amount' => $itemDiscount,
-                'applied_discount_percentage' => $discountPercentage,
-                'final_unit_price' => $finalUnitPrice,
-                'quantity' => $item['quantity'],
-                'selected_modifiers' => $selectedModifiersData,
-                'remark' => trim(($sizeName ? "[Size: $sizeName] " : "") . ($item['remark'] ?? ''))
+            $order = Order::create([
+                'branch_id' => $request->branch_id,
+                'user_id' => Auth::id(),
+                'created_by' => auth()->id(),
+                'order_type' => $request->order_type,
+                'delivery_partner_id' => $request->delivery_partner_id,
+                'restaurant_table_id' => $request->table_id,
+                'status' => 'confirmed',
+                'subtotal' => 0,
+                'item_discount_total' => 0,
+                'order_level_discount' => 0,
+                'delivery_partner_discount' => $round($request->delivery_partner_discount ?? 0),
+                'order_discount_amount' => 0,
+                'tax_rate' => $taxRate,
+                'tax_amount' => 0,
+                'order_code' => $orderCode,
             ]);
 
-            $subtotal += $itemSubtotal;
-            $itemDiscountTotal += $itemDiscount;
-        }
+            foreach ($request->items as $item) {
+                $product = Product::findOrFail($item['product_id']);
+                $branchProduct = BranchProduct::where('branch_id', $branch->id)->where('product_id', $product->id)->firstOrFail();
 
-        // Final Totals
-        $orderLevelDiscount = 0;
-        if (($request->order_discount_amount ?? 0) > 0) {
-            $orderLevelDiscount = $round($request->order_discount_amount);
-        } elseif (($request->order_discount_percentage ?? 0) > 0) {
-            $orderLevelDiscount = $round($subtotal * ($request->order_discount_percentage / 100));
-        }
+                $basePrice = $branchProduct->branch_price ?? $product->base_price;
+                $discountPercentage = 0;
+                $hasActiveDiscount = false;
 
-        $totalDiscount = $round($itemDiscountTotal + $orderLevelDiscount + ($request->delivery_partner_discount ?? 0));
-        $taxableAmount = $subtotal - $totalDiscount;
-        $taxAmount = ($taxIsActive && $taxRate > 0) ? $round($taxableAmount * ($taxRate / 100)) : 0;
-        $total = $round($taxableAmount + $taxAmount);
+                // 1. Check for Size Override
+                $sizeId = $item['selected_size']['id'] ?? null;
+                $sizeName = null;
+                $branchProductSizeId = null;
 
-        $order->update([
-            'subtotal' => $subtotal,
-            'item_discount_total' => $itemDiscountTotal,
-            'order_level_discount' => $orderLevelDiscount,
-            'order_discount_amount' => $totalDiscount,
-            'tax_amount' => $taxAmount,
-            'total' => $total
-        ]);
+                if ($sizeId) {
+                    $branchProductSize = BranchProductSize::where('branch_product_id', $branchProduct->id)->where('size_id', $sizeId)->first();
+                    if ($branchProductSize) {
+                        $basePrice = $branchProductSize->branch_size_price ?? $basePrice;
+                        if ($branchProductSize->is_discount_active) {
+                            $discountPercentage = $branchProductSize->discount_percentage;
+                            $hasActiveDiscount = true;
+                        }
+                        $branchProductSizeId = $branchProductSize->id;
+                        $sizeModel = Size::find($sizeId);
+                        $sizeName = $sizeModel ? $sizeModel->name : null;
+                    }
+                } elseif ($branchProduct->has_active_discount) {
+                    // Fix: Check product-level discount if no size is selected
+                    $discountPercentage = $branchProduct->discount_percentage;
+                    $hasActiveDiscount = true;
+                }
 
-        $order->load(['items.product', 'restaurantTable', 'branch']);
-        $telegram->sendOrderNotification($order);
-        broadcast(new NewOrderRegistered($order))->toOthers();
+                // 2. Override with MANUAL discount from POS frontend
+                if (isset($item['discount_percentage']) && $item['discount_percentage'] > 0) {
+                    $discountPercentage = $item['discount_percentage'];
+                    $hasActiveDiscount = true;
+                }
 
-        return response()->json(['message' => 'Order placed', 
-        'order_id' => $order->id, 
-        'order_code' => $orderCode,
-        'total' => number_format($total, 2, '.', '')]);
-    });
-}
+                // 3. Calculation
+                $modifierTotalPrice = 0;
+                $selectedModifiersData = [];
+                foreach ($item['selected_modifiers'] ?? [] as $modifierId) {
+                    $modifier = Modifier::find($modifierId);
+                    if ($modifier && $modifier->is_available) {
+                        $modifierTotalPrice += $modifier->price;
+                        $selectedModifiersData[] = ['id' => $modifier->id, 'name' => $modifier->name, 'price' => $modifier->price];
+                    }
+                }
+
+                $itemSubtotal = $round(($basePrice + $modifierTotalPrice) * $item['quantity']);
+                $itemDiscount = $hasActiveDiscount ? $round(($basePrice * ($discountPercentage / 100)) * $item['quantity']) : 0;
+                $itemFinalPrice = $round($itemSubtotal - $itemDiscount);
+                $finalUnitPrice = $round($itemFinalPrice / $item['quantity']);
+
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_id' => $product->id,
+                    'branch_product_size_id' => $branchProductSizeId,
+                    'size_id' => $sizeId,
+                    'size_name' => $sizeName,
+                    'base_price' => $round($basePrice),
+                    'original_product_price' => $round($basePrice),
+                    'modifier_total_price' => $round($modifierTotalPrice),
+                    'item_discount_amount' => $itemDiscount,
+                    'applied_discount_percentage' => $discountPercentage,
+                    'final_unit_price' => $finalUnitPrice,
+                    'quantity' => $item['quantity'],
+                    'selected_modifiers' => $selectedModifiersData,
+                    'remark' => trim(($sizeName ? "[Size: $sizeName] " : "") . ($item['remark'] ?? ''))
+                ]);
+
+                $subtotal += $itemSubtotal;
+                $itemDiscountTotal += $itemDiscount;
+            }
+
+            // Final Totals
+            $orderLevelDiscount = 0;
+            if (($request->order_discount_amount ?? 0) > 0) {
+                $orderLevelDiscount = $round($request->order_discount_amount);
+            } elseif (($request->order_discount_percentage ?? 0) > 0) {
+                $orderLevelDiscount = $round($subtotal * ($request->order_discount_percentage / 100));
+            }
+
+            $totalDiscount = $round($itemDiscountTotal + $orderLevelDiscount + ($request->delivery_partner_discount ?? 0));
+            $taxableAmount = $subtotal - $totalDiscount;
+            $taxAmount = ($taxIsActive && $taxRate > 0) ? $round($taxableAmount * ($taxRate / 100)) : 0;
+            $total = $round($taxableAmount + $taxAmount);
+
+            $order->update([
+                'subtotal' => $subtotal,
+                'item_discount_total' => $itemDiscountTotal,
+                'order_level_discount' => $orderLevelDiscount,
+                'order_discount_amount' => $totalDiscount,
+                'tax_amount' => $taxAmount,
+                'total' => $total
+            ]);
+
+            $order->load(['items.product', 'restaurantTable', 'branch']);
+            $telegram->sendOrderNotification($order);
+            broadcast(new NewOrderRegistered($order))->toOthers();
+
+            return response()->json([
+                'message' => 'Order placed',
+                'order_id' => $order->id,
+                'order_code' => $orderCode,
+                'total' => number_format($total, 2, '.', '')
+            ]);
+        });
+    }
 
 }

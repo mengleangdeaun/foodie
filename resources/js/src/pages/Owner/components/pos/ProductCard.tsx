@@ -110,11 +110,6 @@ export const ProductCard = ({ product, onConfigure }: ProductCardProps) => {
           <h3 className="font-semibold text-sm text-foreground line-clamp-1 group-hover:text-primary transition-colors">
             {product.name}
           </h3>
-          {product.short_description && (
-            <p className="text-xs text-muted-foreground line-clamp-2">
-              {product.short_description}
-            </p>
-          )}
         </div>
         
         {/* Price and Action Section */}
@@ -156,7 +151,7 @@ export const ProductCard = ({ product, onConfigure }: ProductCardProps) => {
             {!hasModifiers && !hasSizes ? (
               <span className="text-green-600 dark:text-green-400 font-medium">Ready to add</span>
             ) : (
-              <span>Click to customize</span>
+              <span>Customize</span>
             )}
           </div>
           {showDiscount && (

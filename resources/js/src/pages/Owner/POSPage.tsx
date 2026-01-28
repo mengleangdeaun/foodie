@@ -906,7 +906,7 @@ const scrollTabs = (direction: 'left' | 'right') => {
                 {/* Product Grid */}
                 <div className="flex-1 overflow-hidden">
                     <div className="h-full overflow-y-auto pr-2 pb-4">
-                        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5 gap-3">
                             {loading ? (
                                 Array.from({ length: 12 }).map((_, i) => (
                                     <Card key={i} className="overflow-hidden border-border/40 animate-pulse">
