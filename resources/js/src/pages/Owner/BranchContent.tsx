@@ -6,12 +6,11 @@ import {
     CardContent,
     CardDescription,
     CardHeader,
-    CardTitle
+    CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -19,33 +18,57 @@ import {
     ArrowLeft,
     Save,
     Loader2,
-    FileText,
     Shield,
     Info,
     Facebook,
     Send,
-    Video
+    Video,
 } from "lucide-react";
 import { CustomQuillEditor } from '@/components/custom-quill-editor';
+import { Skeleton } from '@/components/ui/skeleton';
 
+interface Branch {
+    id: number;
+    branch_name: string;
+    about_description: string;
+    is_about_visible: boolean;
+    terms_of_service: string;
+    is_tos_visible: boolean;
+    privacy_policy: string;
+    is_privacy_visible: boolean;
+    social_links?: {
+        facebook?: string;
+        telegram?: string;
+        tiktok?: string;
+    };
+}
+
+interface FormData {
+    about_description: string;
+    is_about_visible: boolean;
+    facebook: string;
+    telegram: string;
+    tiktok: string;
+    terms_of_service: string;
+    is_tos_visible: boolean;
+    privacy_policy: string;
+    is_privacy_visible: boolean;
+}
 
 const BranchContent = () => {
-    const { id } = useParams();
+    const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [branch, setBranch] = useState<any>(null);
+    const [branch, setBranch] = useState<Branch | null>(null);
 
-    const [formData, setFormData] = useState({
-        // About
+    const [formData, setFormData] = useState<FormData>({
         about_description: '',
         is_about_visible: false,
         facebook: '',
         telegram: '',
         tiktok: '',
-
-        // Legal
         terms_of_service: '',
         is_tos_visible: false,
         privacy_policy: '',
@@ -59,24 +82,21 @@ const BranchContent = () => {
     const fetchBranch = async () => {
         try {
             const res = await api.get(`/admin/branches/${id}`);
-            const data = res.data;
+            const data: Branch = res.data;
             setBranch(data);
 
-            // Parse social links if needed, or default to empty
             const social = data.social_links || {};
 
             setFormData({
                 about_description: data.about_description || '',
-                is_about_visible: data.is_about_visible == 1,
-
+                is_about_visible: Boolean(data.is_about_visible),
                 facebook: social.facebook || '',
                 telegram: social.telegram || '',
                 tiktok: social.tiktok || '',
-
                 terms_of_service: data.terms_of_service || '',
-                is_tos_visible: data.is_tos_visible == 1,
+                is_tos_visible: Boolean(data.is_tos_visible),
                 privacy_policy: data.privacy_policy || '',
-                is_privacy_visible: data.is_privacy_visible == 1,
+                is_privacy_visible: Boolean(data.is_privacy_visible),
             });
         } catch (error) {
             toast({
@@ -93,40 +113,33 @@ const BranchContent = () => {
         setSaving(true);
         try {
             const payload = {
-                // Must include required fields from validation if 'update' endpoint validates all
-                // Assuming we use the same 'update' endpoint which might require other fields or we construct a specific payload
-                // The Update Branch endpoint usually allows partial updates if we use merge/patch, but our controller validates 'required' fields.
-                // We need to fetch the branch and send back ALL required fields OR refactor controller to allow partials.
-                // For now, let's assume we're sending a partial update or we need to include everything.
-                // Wait, the controller validates 'branch_name', 'is_active' etc as REQUIRED.
-                // So we should construct a full payload merging existing branch data with new data.
-
-                ...branch, // Spread existing
-                ...formData, // Override with form data
-
-                // Construct social_links array/object
+                ...branch,
+                about_description: formData.about_description,
+                is_about_visible: formData.is_about_visible ? 1 : 0,
+                terms_of_service: formData.terms_of_service,
+                is_tos_visible: formData.is_tos_visible ? 1 : 0,
+                privacy_policy: formData.privacy_policy,
+                is_privacy_visible: formData.is_privacy_visible ? 1 : 0,
                 social_links: {
                     facebook: formData.facebook,
                     telegram: formData.telegram,
                     tiktok: formData.tiktok
                 },
-
-                // Ensure booleans are 1/0 for backend validation if it expects in:0,1
-                is_about_visible: formData.is_about_visible ? 1 : 0,
-                is_tos_visible: formData.is_tos_visible ? 1 : 0,
-                is_privacy_visible: formData.is_privacy_visible ? 1 : 0,
-
-                // Fix potentially missing fields or incompatible types from spread
-                _method: 'PUT'
             };
 
-            await api.post(`/admin/branches/${id}`, payload);
+            // Remove undefined fields
+            Object.keys(payload).forEach(key => {
+                if (payload[key as keyof typeof payload] === undefined) {
+                    delete payload[key as keyof typeof payload];
+                }
+            });
+
+            await api.put(`/admin/branches/${id}`, payload);
 
             toast({
                 title: 'Success',
                 description: 'Content updated successfully'
             });
-            fetchBranch(); // Refetch to sync
         } catch (error: any) {
             toast({
                 variant: 'destructive',
@@ -138,7 +151,21 @@ const BranchContent = () => {
         }
     };
 
-    if (loading) return <div className="flex h-96 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                    <Skeleton className="h-10 w-10" />
+                    <div className="space-y-2">
+                        <Skeleton className="h-8 w-48" />
+                        <Skeleton className="h-4 w-64" />
+                    </div>
+                    <Skeleton className="ml-auto h-10 w-32" />
+                </div>
+                <Skeleton className="h-[400px] w-full" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -162,8 +189,12 @@ const BranchContent = () => {
 
             <Tabs defaultValue="about" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
-                    <TabsTrigger value="about" className="gap-2"><Info className="h-4 w-4" /> About & Socials</TabsTrigger>
-                    <TabsTrigger value="legal" className="gap-2"><Shield className="h-4 w-4" /> Legal & Support</TabsTrigger>
+                    <TabsTrigger value="about" className="gap-2">
+                        <Info className="h-4 w-4" /> About & Socials
+                    </TabsTrigger>
+                    <TabsTrigger value="legal" className="gap-2">
+                        <Shield className="h-4 w-4" /> Legal & Support
+                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="about" className="space-y-4 mt-4">
@@ -175,11 +206,13 @@ const BranchContent = () => {
                                     <CardDescription>Restaurant description and social media links</CardDescription>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Label className='mb-0' htmlFor="is_about_visible">Visible</Label>
+                                    <Label htmlFor="is_about_visible" className="cursor-pointer">Visible</Label>
                                     <Switch
                                         id="is_about_visible"
                                         checked={formData.is_about_visible}
-                                        onCheckedChange={(c) => setFormData({ ...formData, is_about_visible: c })}
+                                        onCheckedChange={(checked) => 
+                                            setFormData({ ...formData, is_about_visible: checked })
+                                        }
                                     />
                                 </div>
                             </div>
@@ -187,21 +220,23 @@ const BranchContent = () => {
                         <CardContent className="space-y-6">
                             <div className="space-y-2">
                                 <Label>About Us Description</Label>
-                                <div className="prose-sm max-w-none">
-                                    <CustomQuillEditor
-                                        value={formData.about_description}
-                                        onChange={(value) => setFormData({ ...formData, about_description: value })}
-                                        variant="seamless"
-                                        minHeight={200}
-                                    />
-                                </div>
+                                <CustomQuillEditor
+                                    value={formData.about_description}
+                                    onChange={(value) => setFormData({ ...formData, about_description: value })}
+                                    variant="default"
+                                    insideCard={true}
+                                    placeholder="Write about your restaurant..."
+                                />
                             </div>
 
                             <div className="space-y-4">
                                 <Label className="text-base">Social Media Links</Label>
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <div className="space-y-2">
-                                        <Label className="flex items-center gap-2"><Facebook className="h-4 w-4 text-blue-600" /> Facebook URL</Label>
+                                        <Label className="flex items-center gap-2">
+                                            <Facebook className="h-4 w-4 text-blue-600" /> 
+                                            Facebook URL
+                                        </Label>
                                         <Input
                                             placeholder="https://facebook.com/yourpage"
                                             value={formData.facebook}
@@ -209,7 +244,10 @@ const BranchContent = () => {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="flex items-center gap-2"><Send className="h-4 w-4 text-sky-500" /> Telegram Channel/Group</Label>
+                                        <Label className="flex items-center gap-2">
+                                            <Send className="h-4 w-4 text-sky-500" /> 
+                                            Telegram Channel/Group
+                                        </Label>
                                         <Input
                                             placeholder="https://t.me/yourchannel"
                                             value={formData.telegram}
@@ -217,7 +255,10 @@ const BranchContent = () => {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="flex items-center gap-2"><Video className="h-4 w-4 text-pink-600" /> TikTok URL</Label>
+                                        <Label className="flex items-center gap-2">
+                                            <Video className="h-4 w-4 text-pink-600" /> 
+                                            TikTok URL
+                                        </Label>
                                         <Input
                                             placeholder="https://tiktok.com/@yourprofile"
                                             value={formData.tiktok}
@@ -239,11 +280,13 @@ const BranchContent = () => {
                                     <CardDescription>Define your service terms and conditions</CardDescription>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Label className="mb-0" htmlFor="is_tos_visible">Visible</Label>
+                                    <Label htmlFor="is_tos_visible" className="cursor-pointer">Visible</Label>
                                     <Switch
                                         id="is_tos_visible"
                                         checked={formData.is_tos_visible}
-                                        onCheckedChange={(c) => setFormData({ ...formData, is_tos_visible: c })}
+                                        onCheckedChange={(checked) => 
+                                            setFormData({ ...formData, is_tos_visible: checked })
+                                        }
                                     />
                                 </div>
                             </div>
@@ -253,9 +296,9 @@ const BranchContent = () => {
                                 value={formData.terms_of_service}
                                 onChange={(value) => setFormData({ ...formData, terms_of_service: value })}
                                 placeholder="Write your terms of service here..."
-                                variant="seamless"
+                                variant="default"
                                 insideCard={true}
-                                minHeight={200}
+                
                             />
                         </CardContent>
                     </Card>
@@ -268,11 +311,13 @@ const BranchContent = () => {
                                     <CardDescription>Explain how you handle data</CardDescription>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Label className='mb-0' htmlFor="is_privacy_visible">Visible</Label>
+                                    <Label htmlFor="is_privacy_visible" className="cursor-pointer">Visible</Label>
                                     <Switch
                                         id="is_privacy_visible"
                                         checked={formData.is_privacy_visible}
-                                        onCheckedChange={(c) => setFormData({ ...formData, is_privacy_visible: c })}
+                                        onCheckedChange={(checked) => 
+                                            setFormData({ ...formData, is_privacy_visible: checked })
+                                        }
                                     />
                                 </div>
                             </div>
@@ -283,7 +328,7 @@ const BranchContent = () => {
                                 onChange={(value) => setFormData({ ...formData, privacy_policy: value })}
                                 placeholder="Write your privacy policy here..."
                                 variant="default"
-                                minHeight={200}
+                                insideCard={true}
                             />
                         </CardContent>
                     </Card>

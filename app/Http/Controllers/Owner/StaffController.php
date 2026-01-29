@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 namespace App\Http\Controllers\Owner;
 
@@ -17,116 +17,119 @@ class StaffController extends Controller
      */
     public function index()
     {
-        return User::where('owner_id', Auth::user()->owner_id)
-            ->where('role', '!=', 'owner')
-            ->with('branch')
-            ->get();
+        $user = Auth::user();
+        $query = User::whereNotIn('role', ['owner', 'super_admin'])->with('branch');
+
+        if ($user->role === 'owner') {
+            $query->where(function ($q) use ($user) {
+                $q->where('owner_id', $user->owner_id)
+                    ->orWhere('owner_id', $user->id);
+            });
+        }
+
+        return $query->get();
     }
 
-    /**
-     * Store a newly created staff member.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'email'       => 'required|email|unique:users,email',
-            'password'    => 'required|min:8',
-            'branch_id'   => 'required|exists:branches,id',
-            'role'        => 'required|in:manager,cashier,waiter,chef',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|min:8',
+            'branch_id' => 'required|exists:branches,id',
+            'role' => 'required|in:manager,cashier,waiter,chef',
             'permissions' => 'nullable|string',
-            'is_active'   => 'nullable|boolean',
-            'avatar'      => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'is_active' => 'nullable|boolean',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
         ]);
 
-        // Security: Ensure the branch belongs to the owner
-        Branch::where('owner_id', Auth::user()->owner_id)->findOrFail($validated['branch_id']);
+        $user = Auth::user();
 
-        // Handle avatar upload
+        // Security: Ensure the branch belongs to the owner
+        Branch::where(function ($q) use ($user) {
+            $q->where('owner_id', $user->owner_id)
+                ->orWhere('owner_id', $user->id);
+        })->findOrFail($validated['branch_id']);
+
         $avatarPath = null;
         if ($request->hasFile('avatar')) {
             $avatarPath = $request->file('avatar')->store('avatars', 'public');
         }
 
-        // Decode permissions if it's a JSON string
         $permissions = [];
         if (!empty($validated['permissions'])) {
-            if (is_string($validated['permissions'])) {
-                $permissions = json_decode($validated['permissions'], true);
-            } else {
-                $permissions = $validated['permissions'];
-            }
+            $permissions = is_string($validated['permissions'])
+                ? json_decode($validated['permissions'], true)
+                : $validated['permissions'];
         }
 
-        $user = User::create([
-            'name'        => $validated['name'],
-            'email'       => $validated['email'],
-            'password'    => Hash::make($validated['password']),
-            'branch_id'   => $validated['branch_id'],
-            'role'        => $validated['role'],
-            'owner_id'    => Auth::user()->owner_id,
+        // New staff always linked to proper Owner Entity ID
+        $newUser = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'branch_id' => $validated['branch_id'],
+            'role' => $validated['role'],
+            'owner_id' => $user->owner_id,
             'permissions' => $permissions,
-            'is_active'   => $validated['is_active'] ?? true,
-            'avatar'      => $avatarPath,
+            'is_active' => $validated['is_active'] ?? true,
+            'avatar' => $avatarPath,
         ]);
 
-        return response()->json(['message' => 'Staff member created successfully', 'user' => $user->load('branch')], 201);
+        return response()->json(['message' => 'Staff member created successfully', 'user' => $newUser->load('branch')], 201);
     }
 
-    /**
-     * Update the specified staff member.
-     */
     public function update(Request $request, $id)
     {
-        $user = User::where('owner_id', Auth::user()->owner_id)
-            ->where('role', '!=', 'owner')
-            ->findOrFail($id);
+        $authUser = Auth::user();
+        $user = User::whereNotIn('role', ['owner', 'super_admin'])
+            ->where(function ($q) use ($authUser) {
+                $q->where('owner_id', $authUser->owner_id)
+                    ->orWhere('owner_id', $authUser->id);
+            })->findOrFail($id);
 
         $validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'email'       => 'required|email|unique:users,email,' . $id,
-            'password'    => 'nullable|min:8',
-            'branch_id'   => 'required|exists:branches,id',
-            'role'        => 'required|in:manager,cashier,waiter,chef',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $id,
+            'password' => 'nullable|min:8',
+            'branch_id' => 'required|exists:branches,id',
+            'role' => 'required|in:manager,cashier,waiter,chef',
             'permissions' => 'nullable|string',
-            'is_active'   => 'nullable|boolean',
-            'avatar'      => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'is_active' => 'nullable|boolean',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
         ]);
 
         // Security: Ensure the new branch belongs to the owner
-        Branch::where('owner_id', Auth::user()->owner_id)->findOrFail($validated['branch_id']);
+        Branch::where(function ($q) use ($authUser) {
+            $q->where('owner_id', $authUser->owner_id)
+                ->orWhere('owner_id', $authUser->id);
+        })->findOrFail($validated['branch_id']);
 
-        // Decode permissions if it's a JSON string
         $permissions = $user->permissions;
         if (!empty($validated['permissions'])) {
-            if (is_string($validated['permissions'])) {
-                $permissions = json_decode($validated['permissions'], true);
-            } else {
-                $permissions = $validated['permissions'];
-            }
+            $permissions = is_string($validated['permissions'])
+                ? json_decode($validated['permissions'], true)
+                : $validated['permissions'];
         }
 
         $user->fill([
-            'name'        => $validated['name'],
-            'email'       => $validated['email'],
-            'branch_id'   => $validated['branch_id'],
-            'role'        => $validated['role'],
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'branch_id' => $validated['branch_id'],
+            'role' => $validated['role'],
             'permissions' => $permissions,
-            'is_active'   => $validated['is_active'] ?? $user->is_active,
+            'is_active' => $validated['is_active'] ?? $user->is_active,
         ]);
 
         if (!empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
         }
 
-        // Handle avatar upload
         if ($request->hasFile('avatar')) {
-            // Delete old avatar if exists
             if ($user->avatar) {
                 Storage::disk('public')->delete($user->avatar);
             }
-            $avatarPath = $request->file('avatar')->store('avatars', 'public');
-            $user->avatar = $avatarPath;
+            $user->avatar = $request->file('avatar')->store('avatars', 'public');
         }
 
         $user->save();
@@ -134,38 +137,32 @@ class StaffController extends Controller
         return response()->json(['message' => 'Staff updated successfully', 'user' => $user->load('branch')]);
     }
 
-    /**
-     * Update staff status (active/inactive)
-     */
     public function updateStatus(Request $request, $id)
     {
-        $user = User::where('owner_id', Auth::user()->owner_id)
-            ->where('role', '!=', 'owner')
-            ->findOrFail($id);
+        $authUser = Auth::user();
+        $user = User::whereNotIn('role', ['owner', 'super_admin'])
+            ->where(function ($q) use ($authUser) {
+                $q->where('owner_id', $authUser->owner_id)
+                    ->orWhere('owner_id', $authUser->id);
+            })->findOrFail($id);
 
-        $validated = $request->validate([
-            'is_active' => 'required|boolean',
-        ]);
+        $validated = $request->validate(['is_active' => 'required|boolean']);
 
         $user->is_active = $validated['is_active'];
         $user->save();
 
-        return response()->json([
-            'message' => 'Staff status updated successfully',
-            'user' => $user->load('branch')
-        ]);
+        return response()->json(['message' => 'Staff status updated successfully', 'user' => $user->load('branch')]);
     }
 
-    /**
-     * Remove the specified staff member.
-     */
     public function destroy($id)
     {
-        $user = User::where('owner_id', Auth::user()->owner_id)
-            ->where('role', '!=', 'owner')
-            ->findOrFail($id);
+        $authUser = Auth::user();
+        $user = User::whereNotIn('role', ['owner', 'super_admin'])
+            ->where(function ($q) use ($authUser) {
+                $q->where('owner_id', $authUser->owner_id)
+                    ->orWhere('owner_id', $authUser->id);
+            })->findOrFail($id);
 
-        // Delete avatar if exists
         if ($user->avatar) {
             Storage::disk('public')->delete($user->avatar);
         }

@@ -10,6 +10,8 @@ const AccountDeactivated = lazy(() => import('../pages/Auth/AccountDeactivated')
 const ForgotPassword = lazy(() => import('../pages/Auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('../pages/Auth/ResetPassword'));
 const CustomerMenu = lazy(() => import('../pages/Customer/CustomerMenu'));
+const AuthDebug = lazy(() => import('../pages/Debug/AuthDebug'));
+
 
 // Super Admin
 const SuperAdminDashboard = lazy(() => import('../pages/SuperAdmin/Dashboard'));
@@ -59,6 +61,8 @@ const routes = [
     { path: '/menu/scan/:token', element: <CustomerMenu />, layout: 'blank' },
     { path: '/admin/unauthorized', element: <Unauthorized />, layout: 'blank' },
     { path: '/auth/account-deactivated', element: <AccountDeactivated />, layout: 'blank' },
+    { path: '/debug-auth', element: <AuthDebug />, layout: 'blank' },
+
 
     // --- Super Admin ---
     { path: '/super-admin/dashboard', element: <ProtectedRoute><SuperAdminDashboard /></ProtectedRoute>, layout: 'default' },
@@ -71,41 +75,41 @@ const routes = [
     // --- POS & Orders (Granular) ---
     {
         path: '/admin/pos',
-        element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'create' }}><POSPage /></ProtectedRoute>,
+        element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'pos_access' }}><POSPage /></ProtectedRoute>,
         layout: 'default',
     },
     {
         path: '/admin/orders/history',
-        element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'read' }}><OrderManagement /></ProtectedRoute>,
+        element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'view_history' }}><OrderManagement /></ProtectedRoute>,
         layout: 'default',
     },
     {
         path: '/admin/live/orders',
-        element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'read' }}><LiveOrder /></ProtectedRoute>,
+        element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'view_live' }}><LiveOrder /></ProtectedRoute>,
         layout: 'default',
     },
     {
         path: '/admin/kitchen',
-        element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'read' }}><KitchenDisplay /></ProtectedRoute>,
-        layout: 'kitchen', // Change this to trigger the new layout
+        element: <ProtectedRoute requiredPermission={{ module: 'kitchen', action: 'access_kds' }}><KitchenDisplay /></ProtectedRoute>,
+        layout: 'kitchen',
     },
     {
         path: '/admin/kitchen/history',
-        element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'read' }}><KitchenHistory /></ProtectedRoute>,
+        element: <ProtectedRoute requiredPermission={{ module: 'kitchen', action: 'access_kds' }}><KitchenHistory /></ProtectedRoute>,
         layout: 'kitchen',
     },
     {
         path: '/admin/kitchen/reports/shift',
-        element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'read' }}><KitchenReports /></ProtectedRoute>,
+        element: <ProtectedRoute requiredPermission={{ module: 'kitchen', action: 'access_kds' }}><KitchenReports /></ProtectedRoute>,
         layout: 'kitchen',
     },
     // --- Management (Owner Only) ---
-    { path: '/admin/overview', element: <ProtectedRoute><OwnnerBranchOverview /></ProtectedRoute>, layout: 'default' },
-    { path: '/admin/dashboard', element: <ProtectedRoute><OwnerDashboard /></ProtectedRoute>, layout: 'default' },
-    { path: '/admin/branches', element: <ProtectedRoute><OwnerBranches /></ProtectedRoute>, layout: 'default' },
-    { path: '/owner/branches/:id/content', element: <ProtectedRoute><BranchContent /></ProtectedRoute>, layout: 'default' },
-    { path: '/admin/staff', element: <ProtectedRoute><StaffManagement /></ProtectedRoute>, layout: 'default' },
-    { path: '/admin/delivery-partners', element: <ProtectedRoute><DeliveryPartnerManagement /></ProtectedRoute>, layout: 'default' },
+    { path: '/admin/overview', element: <ProtectedRoute requiredPermission={{ module: 'management', action: 'view_business_insight' }}><OwnnerBranchOverview /></ProtectedRoute>, layout: 'default' },
+    { path: '/admin/dashboard', element: <ProtectedRoute requiredPermission={{ module: 'orders', action: 'view_dashboard' }}><OwnerDashboard /></ProtectedRoute>, layout: 'default' },
+    { path: '/admin/branches', element: <ProtectedRoute requiredPermission={{ module: 'management', action: 'manage_branches' }}><OwnerBranches /></ProtectedRoute>, layout: 'default' },
+    { path: '/owner/branches/:id/content', element: <ProtectedRoute requiredPermission={{ module: 'management', action: 'manage_branches' }}><BranchContent /></ProtectedRoute>, layout: 'default' },
+    { path: '/admin/staff', element: <ProtectedRoute requiredPermission={{ module: 'management', action: 'manage_staff' }}><StaffManagement /></ProtectedRoute>, layout: 'default' },
+    { path: '/admin/delivery-partners', element: <ProtectedRoute requiredPermission={{ module: 'management', action: 'manage_delivery_partners' }}><DeliveryPartnerManagement /></ProtectedRoute>, layout: 'default' },
     { path: '/admin/settings/receipt', element: <ProtectedRoute><ReceiptSettings /></ProtectedRoute>, layout: 'default' },
 
     // --- User Profile ---
@@ -114,42 +118,42 @@ const routes = [
     // --- Menu & Inventory (Granular) ---
     {
         path: '/admin/inventory',
-        element: <ProtectedRoute requiredPermission={{ module: 'menu', action: 'read' }}><BranchInventory /></ProtectedRoute>,
+        element: <ProtectedRoute requiredPermission={{ module: 'menu', action: 'manage_inventory' }}><BranchInventory /></ProtectedRoute>,
         layout: 'default',
     },
     {
         path: '/admin/price-size/:branchId/products/:productId/sizes',
-        element: <ProtectedRoute requiredPermission={{ module: 'menu', action: 'read' }}><BranchProPriceSize /></ProtectedRoute>,
+        element: <ProtectedRoute requiredPermission={{ module: 'menu', action: 'manage_products' }}><BranchProPriceSize /></ProtectedRoute>,
         layout: 'default',
     },
     {
         path: '/admin/remark-presets',
-        element: <ProtectedRoute requiredPermission={{ module: 'menu', action: 'read' }}><RemarkManagement /></ProtectedRoute>,
+        element: <ProtectedRoute requiredPermission={{ module: 'menu', action: 'manage_presets' }}><RemarkManagement /></ProtectedRoute>,
         layout: 'default',
     },
     {
         path: '/admin/product-modifier',
-        element: <ProtectedRoute requiredPermission={{ module: 'menu', action: 'read' }}><ProductModifier /></ProtectedRoute>,
+        element: <ProtectedRoute requiredPermission={{ module: 'menu', action: 'manage_addons' }}><ProductModifier /></ProtectedRoute>,
         layout: 'default',
     },
     {
         path: '/admin/product-attribute',
-        element: <ProtectedRoute requiredPermission={{ module: 'menu', action: 'read' }}><ProductAttribute /></ProtectedRoute>,
+        element: <ProtectedRoute requiredPermission={{ module: 'menu', action: 'manage_attributes' }}><ProductAttribute /></ProtectedRoute>,
         layout: 'default',
     },
     {
         path: '/admin/categories',
-        element: <ProtectedRoute requiredPermission={{ module: 'menu', action: 'read' }}><OwnerCategories /></ProtectedRoute>,
+        element: <ProtectedRoute requiredPermission={{ module: 'menu', action: 'manage_categories' }}><OwnerCategories /></ProtectedRoute>,
         layout: 'default',
     },
     {
         path: '/admin/products',
-        element: <ProtectedRoute requiredPermission={{ module: 'menu', action: 'read' }}><OwnerProducts /></ProtectedRoute>,
+        element: <ProtectedRoute requiredPermission={{ module: 'menu', action: 'manage_products' }}><OwnerProducts /></ProtectedRoute>,
         layout: 'default',
     },
     {
         path: '/admin/tables',
-        element: <ProtectedRoute requiredPermission={{ module: 'tables', action: 'read' }}><OwnerTables /></ProtectedRoute>,
+        element: <ProtectedRoute requiredPermission={{ module: 'tables', action: 'manage_tables' }}><OwnerTables /></ProtectedRoute>,
         layout: 'default',
     },
     {

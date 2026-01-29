@@ -4,13 +4,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { setPageTitle, toggleRTL } from '../../store/themeConfigSlice';
 import { IRootState } from '../../store';
 import api from '../../util/api';
-import { useAuth } from '../../context/AuthContext'; // 1. Import useAuth
-import { Loader2 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { Loader2, Mail, Lock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const Login = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { login } = useAuth(); // 2. Extract login function
+    const { login } = useAuth();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -47,7 +48,7 @@ const Login = () => {
 
             // Smart Redirection
             if (user.role === 'owner') {
-                navigate('/admin/dashboard'); // Owners see a high-level overview
+                navigate('/admin/dashboard');
             } else if (['manager', 'staff', 'chef'].includes(user.role)) {
                 navigate(user.role === 'chef' ? '/admin/kitchen' : '/admin/dashboard');
             } else {
@@ -93,29 +94,39 @@ const Login = () => {
                             <form className="space-y-5 dark:text-white" onSubmit={submitForm}>
                                 <div>
                                     <label htmlFor="Email">Email</label>
-                                    <input
-                                        id="Email"
-                                        type="email"
-                                        placeholder="Enter Email"
-                                        className="form-input"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        required
-                                    />
+                                    <div className="relative text-white-dark">
+                                        <input
+                                            id="Email"
+                                            type="email"
+                                            placeholder="Enter Email"
+                                            className="form-input ps-10 placeholder:text-white-dark"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            required
+                                        />
+                                        <span className="absolute start-3 top-1/2 -translate-y-1/2">
+                                            <Mail className="h-4 w-4" />
+                                        </span>
+                                    </div>
                                 </div>
                                 <div>
                                     <label htmlFor="Password">Password</label>
-                                    <input
-                                        id="Password"
-                                        type="password"
-                                        placeholder="Enter Password"
-                                        className="form-input"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        required
-                                    />
+                                    <div className="relative text-white-dark">
+                                        <input
+                                            id="Password"
+                                            type="password"
+                                            placeholder="Enter Password"
+                                            className="form-input ps-10 placeholder:text-white-dark"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            required
+                                        />
+                                        <span className="absolute start-3 top-1/2 -translate-y-1/2">
+                                            <Lock className="h-4 w-4" />
+                                        </span>
+                                    </div>
                                 </div>
-                                <div>
+                                <div className="flex justify-between">
                                     <label className="cursor-pointer">
                                         <input
                                             type="checkbox"
@@ -125,8 +136,11 @@ const Login = () => {
                                         />
                                         <span className="text-white-dark">Remember me</span>
                                     </label>
+                                    <Link to="/auth/forgot-password" className="text-white-dark hover:text-primary transition-colors">
+                                        Forgot Password?
+                                    </Link>
                                 </div>
-                                <button
+                                <Button
                                     type="submit"
                                     disabled={loading}
                                     className="btn shadow-none !mt-6 w-full border uppercase"
@@ -136,7 +150,7 @@ const Login = () => {
                                             <Loader2 className="animate-spin h-4 w-4" /> Processing...
                                         </span>
                                     ) : 'Sign in'}
-                                </button>
+                                </Button>
                                 <div className="text-center mt-6">
                                     <p className="text-white-dark">
                                         Don't have an account?{' '}

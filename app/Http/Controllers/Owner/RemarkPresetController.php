@@ -9,15 +9,28 @@ use Illuminate\Support\Facades\Auth;
 
 class RemarkPresetController extends Controller
 {
-public function index()
-{
-    // Get all presets owned by this user with their relationships
-    return RemarkPreset::where('owner_id', Auth::id())
-        ->with(['categories:id,name', 'branches:id,branch_name'])
-        ->withCount(['categories', 'branches'])
-        ->latest()
-        ->get();
-}
+    public function index()
+    {
+        // Fix: Use owner_id instead of Auth::id() so staff can see data
+        $query = RemarkPreset::where('owner_id', Auth::user()->owner_id)
+            ->with(['categories:id,name', 'branches:id,branch_name'])
+            ->withCount(['categories', 'branches']);
+
+        // Filter by branch if user is staff (and thus belongs to a branch)
+        // The user requested "shows base on branch"
+        $user = Auth::user();
+        if ($user->role !== 'owner' && $user->branch_id) {
+            // Show global presets (no branch assigned) OR presets assigned to this branch
+            $query->where(function ($q) use ($user) {
+                $q->doesntHave('branches') // Available to all branches
+                    ->orWhereHas('branches', function ($b) use ($user) {
+                        $b->where('branches.id', $user->branch_id);
+                    });
+            });
+        }
+
+        return $query->latest()->get();
+    }
 
     public function store(Request $request)
     {
@@ -31,7 +44,7 @@ public function index()
         ]);
 
         $preset = RemarkPreset::create([
-            'owner_id' => Auth::id(),
+            'owner_id' => Auth::user()->owner_id,
             'name' => $validated['name'],
             'options' => $validated['options'],
             'type' => $validated['type'],
@@ -53,7 +66,7 @@ public function index()
     public function update(Request $request, $id)
     {
         // Find the remark preset and ensure it belongs to the current user
-        $remarkPreset = RemarkPreset::where('owner_id', Auth::id())
+        $remarkPreset = RemarkPreset::where('owner_id', Auth::user()->owner_id)
             ->findOrFail($id);
 
         $validated = $request->validate([
@@ -80,11 +93,11 @@ public function index()
     public function destroy($id)
     {
         // Find and ensure owner owns the preset before deleting
-        $remarkPreset = RemarkPreset::where('owner_id', Auth::id())
+        $remarkPreset = RemarkPreset::where('owner_id', Auth::user()->owner_id)
             ->findOrFail($id);
-        
+
         $remarkPreset->delete();
-        
+
         return response()->json([
             'message' => 'Remark preset deleted successfully'
         ]);
@@ -97,7 +110,7 @@ public function index()
             'category_ids' => 'array',
         ]);
 
-        $preset = RemarkPreset::where('owner_id', Auth::id())
+        $preset = RemarkPreset::where('owner_id', Auth::user()->owner_id)
             ->findOrFail($id);
 
         // Synchronize both pivots

@@ -4,111 +4,111 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  DollarSign, 
-  ShoppingBag, 
-  TrendingUp, 
-  Clock, 
-  Loader2, 
-  Users,
-  TrendingDown,
-  TrendingUp as TrendingUpIcon,
-  PieChart,
-  BarChart3,
-  Download,
-  RefreshCw,
-  Filter,
-  Calendar,
-  Eye,
-  Table,
-  Activity,
-  Package,
-  ChefHat,
-  ShoppingCart,
-  UtensilsCrossed,
-  Thermometer,
-  Zap,
-  AlertCircle,
-  ListOrdered
+import {
+    DollarSign,
+    ShoppingBag,
+    TrendingUp,
+    Clock,
+    Loader2,
+    Users,
+    TrendingDown,
+    TrendingUp as TrendingUpIcon,
+    PieChart,
+    BarChart3,
+    Download,
+    RefreshCw,
+    Filter,
+    Calendar,
+    Eye,
+    Table,
+    Activity,
+    Package,
+    ChefHat,
+    ShoppingCart,
+    UtensilsCrossed,
+    Thermometer,
+    Zap,
+    AlertCircle,
+    ListOrdered
 } from "lucide-react";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  ResponsiveContainer, 
-  Cell, 
-  PieChart as RechartPieChart, 
-  Pie, 
-  Legend,
-  CartesianGrid,
-  AreaChart,
-  Area,
-  ComposedChart,
-  Line
+import {
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    Tooltip,
+    ResponsiveContainer,
+    Cell,
+    PieChart as RechartPieChart,
+    Pie,
+    Legend,
+    CartesianGrid,
+    AreaChart,
+    Area,
+    ComposedChart,
+    Line
 } from 'recharts';
 import { format, startOfDay, endOfDay, subDays, isSameDay, parseISO, differenceInDays } from 'date-fns';
 import DateTimeRangePicker, { DateTimeRange } from "@/components/ui/date-time-range-picker";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
-import { useToast , toast } from "@/hooks/use-toast";
+import { useToast, toast } from "@/hooks/use-toast";
 import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css';
 import 'tippy.js/animations/shift-away.css';
-import OrderTypeBadge from "./components/OrderTypeBadge"; 
+import OrderTypeBadge from "./components/OrderTypeBadge";
 import { ORDER_STATUS, STATUS_CONFIG } from '@/constants/orderStatus';
 import { cn } from "@/lib/utils";
 
 // Types
 interface DashboardData {
-  metrics: {
-    revenue: { current: number; previous: number; change: number };
-    orders: { current: number; previous: number; change: number };
-    aov: { current: number; previous: number; change: number };
-    customers: { current: number; previous: number; change: number };
-    peak_hour: string;
-    avg_prep_time: number | null;
-    total_items_sold: number;
-    order_types: Array<{
-      type: string;
-      count: number;
-      revenue: number;
-      count_percentage: number;
-      revenue_percentage: number;
+    metrics: {
+        revenue: { current: number; previous: number; change: number };
+        orders: { current: number; previous: number; change: number };
+        aov: { current: number; previous: number; change: number };
+        customers: { current: number; previous: number; change: number };
+        peak_hour: string;
+        avg_prep_time: number | null;
+        total_items_sold: number;
+        order_types: Array<{
+            type: string;
+            count: number;
+            revenue: number;
+            count_percentage: number;
+            revenue_percentage: number;
+        }>;
+    };
+    top_selling: Array<{
+        id: number;
+        name: string;
+        total_qty: number;
+        total_revenue: number;
     }>;
-  };
-  top_selling: Array<{
-    id: number;
-    name: string;
-    total_qty: number;
-    total_revenue: number;
-  }>;
-  category_revenue: Array<{
-    id: number;
-    name: string;
-    value: number;
-    percentage: number;
-    order_count: number;
-  }>;
-  heatmap_data: Array<{
-    hour: string;
-    hour_number: number;
-    order_count: number;
-    revenue: number;
-    avg_order_value: number;
-    intensity: number;
-  }>;
-  recent_orders: Array<any>;
-  top_modifiers: Array<any>;
-  date_range: {
-    human_readable: string;
-  };
+    category_revenue: Array<{
+        id: number;
+        name: string;
+        value: number;
+        percentage: number;
+        order_count: number;
+    }>;
+    heatmap_data: Array<{
+        hour: string;
+        hour_number: number;
+        order_count: number;
+        revenue: number;
+        avg_order_value: number;
+        intensity: number;
+    }>;
+    recent_orders: Array<any>;
+    top_modifiers: Array<any>;
+    date_range: {
+        human_readable: string;
+    };
 }
 
 const BranchDashboard = () => {
@@ -121,21 +121,21 @@ const BranchDashboard = () => {
     });
     const [activeTab, setActiveTab] = useState('overview');
     const [realtimeStats, setRealtimeStats] = useState({
-      orders_last_hour: 0,
-      revenue_last_hour: 0,
-      pending_orders: 0,
-      active_tables: 0
+        orders_last_hour: 0,
+        revenue_last_hour: 0,
+        pending_orders: 0,
+        active_tables: 0
     });
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             const params: any = {};
-            
+
             if (dateTimeRange) {
                 params.start_date = format(dateTimeRange.startDate, 'yyyy-MM-dd');
                 params.end_date = format(dateTimeRange.endDate, 'yyyy-MM-dd');
-                
+
                 if (dateTimeRange.useTimeRange && dateTimeRange.startTime && dateTimeRange.endTime) {
                     params.start_time = dateTimeRange.startTime;
                     params.end_time = dateTimeRange.endTime;
@@ -153,21 +153,21 @@ const BranchDashboard = () => {
     }, [dateTimeRange]);
 
     const fetchRealtimeData = async () => {
-      try {
-        const res = await api.get('/admin/branch/dashboard/realtime');
-        setRealtimeStats(res.data);
-      } catch (error) {
-        console.error('Error fetching realtime data:', error);
-      }
+        try {
+            const res = await api.get('/admin/branch/dashboard/realtime');
+            setRealtimeStats(res.data);
+        } catch (error) {
+            console.error('Error fetching realtime data:', error);
+        }
     };
 
     useEffect(() => {
         fetchData();
-        
+
         // Fetch realtime data every 30 seconds
         fetchRealtimeData();
         const interval = setInterval(fetchRealtimeData, 30000);
-        
+
         return () => clearInterval(interval);
     }, [fetchData]);
 
@@ -177,11 +177,11 @@ const BranchDashboard = () => {
             const daysDiff = differenceInDays(dateTimeRange.endDate, dateTimeRange.startDate);
             if (daysDiff > 30) {
                 // toast.error('Date range cannot exceed 30 days');
-                toast({ 
-                variant: "destructive", 
-                title: "Update failed", 
-                description: "Date range cannot exceed 30 days" 
-            });
+                toast({
+                    variant: "destructive",
+                    title: "Update failed",
+                    description: "Date range cannot exceed 30 days"
+                });
                 console.log('Date range cannot exceed 30');
                 return;
             }
@@ -200,7 +200,7 @@ const BranchDashboard = () => {
 
     const handleExport = () => {
         if (!data) return;
-        
+
         const csvContent = convertToCSV(data);
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
@@ -221,16 +221,16 @@ const BranchDashboard = () => {
             ['Average Order Value', data.metrics.aov.current, data.metrics.aov.previous, data.metrics.aov.change],
             ['Customers', data.metrics.customers.current, data.metrics.customers.previous, data.metrics.customers.change],
         ];
-        
+
         return [headers, ...rows].map(row => row.join(',')).join('\n');
     };
 
-const getStatusClasses = (status: string): string => {
-    const config = STATUS_CONFIG[status];
-    if (!config) return '';
-    
-    return `${config.bg} ${config.border} ${config.text} ${config.darkBg} ${config.darkBorder} ${config.darkText} border-2`;
-};
+    const getStatusClasses = (status: string): string => {
+        const config = STATUS_CONFIG[status];
+        if (!config) return '';
+
+        return `${config.bg} ${config.border} ${config.text} ${config.darkBg} ${config.darkBorder} ${config.darkText} border-2`;
+    };
 
     // Format currency
     const formatCurrency = (amount: number) => {
@@ -244,7 +244,7 @@ const getStatusClasses = (status: string): string => {
 
     // Heatmap cell colors based on intensity
     const getHeatmapColor = (intensity: number) => {
-        switch(intensity) {
+        switch (intensity) {
             case 0: return 'bg-gray-100 dark:bg-gray-800';
             case 1: return 'bg-blue-100 dark:bg-blue-900/30';
             case 2: return 'bg-blue-300 dark:bg-blue-700/50';
@@ -264,21 +264,21 @@ const getStatusClasses = (status: string): string => {
                         {data?.date_range?.human_readable || 'Loading...'}
                     </p>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
+                    <Button
+                        variant="outline"
+                        size="sm"
                         onClick={handleResetFilters}
                         disabled={loading}
                     >
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Reset
                     </Button>
-                    
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
+
+                    <Button
+                        variant="outline"
+                        size="sm"
                         onClick={handleExport}
                         disabled={loading || !data}
                     >
@@ -299,7 +299,7 @@ const getStatusClasses = (status: string): string => {
                         <Clock className="h-5 w-5 text-blue-500" />
                     </div>
                 </div>
-                
+
                 <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
                     <div className="flex items-center justify-between">
                         <div>
@@ -309,7 +309,7 @@ const getStatusClasses = (status: string): string => {
                         <Zap className="h-5 w-5 text-green-500" />
                     </div>
                 </div>
-                
+
                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
                     <div className="flex items-center justify-between">
                         <div>
@@ -319,7 +319,7 @@ const getStatusClasses = (status: string): string => {
                         <AlertCircle className="h-5 w-5 text-amber-500" />
                     </div>
                 </div>
-                
+
                 <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
                     <div className="flex items-center justify-between">
                         <div>
@@ -341,9 +341,9 @@ const getStatusClasses = (status: string): string => {
                             label="Select Date & Time Range"
                             required
                             className="w-full "
-                            
+
                         />
-                        
+
                         <div className="flex items-center justify-between pt-4 border-t">
                             <div className="text-sm text-muted-foreground">
                                 {dateTimeRange?.useTimeRange ? (
@@ -358,9 +358,9 @@ const getStatusClasses = (status: string): string => {
                                     </span>
                                 )}
                             </div>
-                            
-                            <Button 
-                                onClick={handleApplyFilters} 
+
+                            <Button
+                                onClick={handleApplyFilters}
                                 className="bg-primary hover:bg-primary/90"
                                 disabled={loading || !dateTimeRange}
                             >
@@ -410,8 +410,8 @@ const getStatusClasses = (status: string): string => {
                 <TabsContent value="overview" className="space-y-6">
                     {/* Metrics Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <MetricCard 
-                            title="Total Revenue" 
+                        <MetricCard
+                            title="Total Revenue"
                             value={formatCurrency(data?.metrics?.revenue?.current ?? 0)}
                             icon={<DollarSign className="h-5 w-5" />}
                             change={data?.metrics?.revenue?.change ?? 0}
@@ -420,9 +420,9 @@ const getStatusClasses = (status: string): string => {
                             iconColor="text-green-500"
                             subtitle="vs previous period"
                         />
-                        
-                        <MetricCard 
-                            title="Total Orders" 
+
+                        <MetricCard
+                            title="Total Orders"
                             value={(data?.metrics?.orders?.current ?? 0).toLocaleString()}
                             icon={<ShoppingBag className="h-5 w-5" />}
                             change={data?.metrics?.orders?.change ?? 0}
@@ -431,9 +431,9 @@ const getStatusClasses = (status: string): string => {
                             iconColor="text-blue-500"
                             subtitle="transactions"
                         />
-                        
-                        <MetricCard 
-                            title="Avg. Order Value" 
+
+                        <MetricCard
+                            title="Avg. Order Value"
                             value={formatCurrency(data?.metrics?.aov?.current ?? 0)}
                             icon={<TrendingUp className="h-5 w-5" />}
                             change={data?.metrics?.aov?.change ?? 0}
@@ -442,9 +442,9 @@ const getStatusClasses = (status: string): string => {
                             iconColor="text-purple-500"
                             subtitle="per transaction"
                         />
-                        
-                        <MetricCard 
-                            title="Most Popular Table" 
+
+                        <MetricCard
+                            title="Most Popular Table"
                             value={data?.metrics?.most_ordered_table?.current?.table_number ?? 'N/A'}
                             icon={<Table className="h-5 w-5" />} // Changed icon from Users to Table
                             subtitle={`${data?.metrics?.most_ordered_table?.current?.order_count ?? 0} orders served`}
@@ -477,46 +477,66 @@ const getStatusClasses = (status: string): string => {
                                     <div className="h-full flex items-center justify-center">
                                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                                     </div>
-                                ) : data?.top_selling?.length > 0 ? (
+                                ) : (data?.top_selling?.length ?? 0) > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <ComposedChart data={data.top_selling}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                            <XAxis 
-                                                dataKey="name" 
+                                            <CartesianGrid
+                                                strokeDasharray="3 3"
+                                                className="stroke-border"
+                                            />
+                                            <XAxis
+                                                dataKey="name"
                                                 angle={-45}
                                                 textAnchor="end"
                                                 height={60}
                                                 fontSize={12}
+                                                className="fill-muted-foreground"
+                                                stroke="hsl(var(--muted-foreground))"
                                             />
-                                            <YAxis 
+                                            <YAxis
                                                 yAxisId="left"
                                                 fontSize={12}
+                                                className="fill-muted-foreground"
+                                                stroke="hsl(var(--muted-foreground))"
                                             />
-                                            <YAxis 
-                                                yAxisId="right" 
+                                            <YAxis
+                                                yAxisId="right"
                                                 orientation="right"
                                                 fontSize={12}
+                                                className="fill-muted-foreground"
+                                                stroke="hsl(var(--muted-foreground))"
                                             />
-                                            <Tooltip 
+                                            <Tooltip
                                                 formatter={(value, name) => {
                                                     if (name === 'total_qty') return [`${value} units`, 'Quantity'];
                                                     if (name === 'total_revenue') return [formatCurrency(value as number), 'Revenue'];
                                                     return [value, name];
                                                 }}
+                                                contentStyle={{
+                                                    backgroundColor: 'hsl(var(--popover))',
+                                                    border: '1px solid hsl(var(--border))',
+                                                    borderRadius: '0.5rem',
+                                                    color: 'hsl(var(--popover-foreground))'
+                                                }}
+                                                labelStyle={{
+                                                    color: 'hsl(var(--popover-foreground))'
+                                                }}
                                             />
-                                            <Bar 
+                                            <Bar
                                                 yAxisId="left"
-                                                dataKey="total_qty" 
+                                                dataKey="total_qty"
                                                 fill="hsl(var(--primary))"
                                                 name="Quantity"
+                                                radius={[4, 4, 0, 0]}
                                             />
-                                            <Line 
+                                            <Line
                                                 yAxisId="right"
-                                                type="monotone" 
-                                                dataKey="total_revenue" 
-                                                stroke="hsl(var(--primary))" 
+                                                type="monotone"
+                                                dataKey="total_revenue"
+                                                stroke="hsl(var(--primary))"
                                                 strokeWidth={2}
                                                 name="Revenue"
+                                                dot={{ fill: 'hsl(var(--primary))' }}
                                             />
                                         </ComposedChart>
                                     </ResponsiveContainer>
@@ -547,43 +567,78 @@ const getStatusClasses = (status: string): string => {
                                     <div className="h-full flex items-center justify-center">
                                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                                     </div>
-                                ) : data?.category_revenue?.length > 0 ? (
+                                ) : (data?.category_revenue?.length ?? 0) > 0 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <RechartPieChart>
                                             <Pie
                                                 data={data.category_revenue}
                                                 cx="50%"
                                                 cy="50%"
-                                                labelLine={false}
-                                                label={(entry) => `${entry.name}: ${entry.percentage}%`}
+                                                labelLine={{
+                                                    stroke: 'hsl(var(--muted-foreground))',
+                                                    strokeWidth: 1
+                                                }}
+                                                label={(props) => {
+                                                    const { x, y, name, percentage, cx } = props;
+                                                    return (
+                                                        <text
+                                                            x={x}
+                                                            y={y}
+                                                            fill="hsl(var(--foreground))"
+                                                            textAnchor={x > cx ? 'start' : 'end'}
+                                                            dominantBaseline="central"
+                                                            className="text-xs font-medium"
+                                                        >
+                                                            {`${name}: ${percentage}%`}
+                                                        </text>
+                                                    );
+                                                }}
                                                 outerRadius={80}
-                                                fill="#8884d8"
                                                 dataKey="value"
+                                                stroke="hsl(var(--background))"
+                                                strokeWidth={2}
                                             >
                                                 {data.category_revenue.map((entry, index) => (
-                                                    <Cell 
-                                                        key={`cell-${index}`} 
+                                                    <Cell
+                                                        key={`cell-${index}`}
                                                         fill={[
                                                             'hsl(var(--primary))',
-                                                            '#FF6B6B',
-                                                            '#4ECDC4',
+                                                            'hsl(var(--chart-1))',
+                                                            'hsl(var(--chart-2))',
+                                                            'hsl(var(--chart-3))',
+                                                            'hsl(var(--chart-4))',
+                                                            'hsl(var(--chart-5))',
                                                             'hsl(var(--secondary))',
                                                             'hsl(var(--accent))',
-                                                            'hsl(var(--destructive))',
-                                                            'hsl(var(--muted-foreground))',
-                                                            '#FF6B6B',
-                                                            '#4ECDC4'
-                                                        ][index % 7]}
+                                                            'hsl(var(--muted))'
+                                                        ][index % 9]}
                                                     />
                                                 ))}
                                             </Pie>
-                                            <Tooltip 
+                                            <Tooltip
                                                 formatter={(value, name, props) => [
-                                                    formatCurrency(value as number), 
+                                                    formatCurrency(value as number),
                                                     `${props.payload.name} (${props.payload.percentage}%)`
-                                                ]} 
+                                                ]}
+                                                contentStyle={{
+                                                    backgroundColor: 'hsl(var(--popover))',
+                                                    border: '1px solid hsl(var(--border))',
+                                                    borderRadius: '0.5rem',
+                                                    color: 'hsl(var(--popover-foreground))'
+                                                }}
+                                                itemStyle={{
+                                                    color: 'hsl(var(--popover-foreground))'
+                                                }}
+                                                labelStyle={{
+                                                    color: 'hsl(var(--popover-foreground))'
+                                                }}
                                             />
-                                            <Legend />
+                                            <Legend
+                                                wrapperStyle={{
+                                                    color: 'hsl(var(--foreground))'
+                                                }}
+                                                iconType="circle"
+                                            />
                                         </RechartPieChart>
                                     </ResponsiveContainer>
                                 ) : (
@@ -609,92 +664,92 @@ const getStatusClasses = (status: string): string => {
                                     Busy Hours Analysis
                                 </Badge>
                             </CardTitle>
-                            </CardHeader>
-                            <CardDescription className="px-6 pb-2">
-                                Order intensity by hour of day (darker = busier)
-                            </CardDescription>
-                            <CardContent>
-                                {loading ? (
-                                    <div className="h-[400px] flex items-center justify-center">
-                                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                                    </div>
-                                ) : data?.heatmap_data?.length > 0 ? (
-                                    <div>
-                                        <div className="grid grid-cols-8 md:grid-cols-12 lg:grid-cols-24 gap-1 mb-6">
-                                            {data.heatmap_data.map((hourData, index) => (
+                        </CardHeader>
+                        <CardDescription className="px-6 pb-2">
+                            Order intensity by hour of day (darker = busier)
+                        </CardDescription>
+                        <CardContent>
+                            {loading ? (
+                                <div className="h-[400px] flex items-center justify-center">
+                                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                                </div>
+                            ) : (data?.heatmap_data?.length ?? 0) > 0 ? (
+                                <div>
+                                    <div className="grid grid-cols-8 md:grid-cols-12 lg:grid-cols-24 gap-1 mb-6">
+                                        {data.heatmap_data.map((hourData, index) => (
                                             <div key={index} className="flex flex-col items-center">
-                                                <Tippy 
+                                                <Tippy
                                                     content={`${hourData.hour}: ${hourData.order_count} orders, ${formatCurrency(hourData.revenue)}`}
                                                     placement="top"
                                                     arrow={true}
                                                     animation="fade"
                                                 >
-                                                    <div 
-                                                        className={`w-full h-8 rounded ${getHeatmapColor(hourData.intensity)} transition-all duration-300 hover:scale-105 cursor-help`} 
+                                                    <div
+                                                        className={`w-full h-8 rounded ${getHeatmapColor(hourData.intensity)} transition-all duration-300 hover:scale-105 cursor-help`}
                                                     />
                                                 </Tippy>
-                                                
+
                                                 <span className="text-xs mt-1 text-muted-foreground">
                                                     {hourData.hour.split(':')[0]}
                                                 </span>
                                             </div>
-                                            ))}
-                                        </div>
-                                        
-                                        <div className="flex items-center justify-between text-sm text-muted-foreground">
-                                            <div className="flex items-center gap-4">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-4 h-4 rounded bg-gray-100" />
-                                                    <span>Low</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-4 h-4 rounded bg-blue-300" />
-                                                    <span>Medium</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-4 h-4 rounded bg-blue-700" />
-                                                    <span>High</span>
-                                                </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-4 h-4 rounded bg-gray-100" />
+                                                <span>Low</span>
                                             </div>
-                                            <div>
-                                                Peak Hour: <span className="font-semibold">{data.metrics.peak_hour}</span>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-4 h-4 rounded bg-blue-300" />
+                                                <span>Medium</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-4 h-4 rounded bg-blue-700" />
+                                                <span>High</span>
                                             </div>
                                         </div>
-                                        
-                                        <div className="mt-8">
-                                            <h4 className="font-semibold mb-4">Hourly Breakdown</h4>
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-sm">
-                                                    <thead>
-                                                        <tr className="border-b">
-                                                            <th className="text-left p-2">Hour</th>
-                                                            <th className="text-left p-2">Orders</th>
-                                                            <th className="text-left p-2">Revenue</th>
-                                                            <th className="text-left p-2">Avg. Order Value</th>
+                                        <div>
+                                            Peak Hour: <span className="font-semibold">{data.metrics.peak_hour}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-8">
+                                        <h4 className="font-semibold mb-4">Hourly Breakdown</h4>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm">
+                                                <thead>
+                                                    <tr className="border-b">
+                                                        <th className="text-left p-2">Hour</th>
+                                                        <th className="text-left p-2">Orders</th>
+                                                        <th className="text-left p-2">Revenue</th>
+                                                        <th className="text-left p-2">Avg. Order Value</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {data.heatmap_data.filter(h => h.order_count > 0).map((hourData, index) => (
+                                                        <tr key={index} className="border-b hover:bg-muted/50">
+                                                            <td className="p-2 font-medium">{hourData.hour}</td>
+                                                            <td className="p-2">{hourData.order_count}</td>
+                                                            <td className="p-2">{formatCurrency(hourData.revenue)}</td>
+                                                            <td className="p-2">{formatCurrency(hourData.avg_order_value)}</td>
                                                         </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {data.heatmap_data.filter(h => h.order_count > 0).map((hourData, index) => (
-                                                            <tr key={index} className="border-b hover:bg-muted/50">
-                                                                <td className="p-2 font-medium">{hourData.hour}</td>
-                                                                <td className="p-2">{hourData.order_count}</td>
-                                                                <td className="p-2">{formatCurrency(hourData.revenue)}</td>
-                                                                <td className="p-2">{formatCurrency(hourData.avg_order_value)}</td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                                    ))}
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
-                                ) : (
-                                    <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-                                        No heatmap data available for the selected period
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    
+                                </div>
+                            ) : (
+                                <div className="h-[200px] flex items-center justify-center text-muted-foreground">
+                                    No heatmap data available for the selected period
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
                 </TabsContent>
 
                 {/* Products Tab */}
@@ -711,7 +766,7 @@ const getStatusClasses = (status: string): string => {
                                 <div className="h-[200px] flex items-center justify-center">
                                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                                 </div>
-                            ) : data?.top_selling?.length > 0 ? (
+                            ) : (data?.top_selling?.length ?? 0) > 0 ? (
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm">
                                         <thead>
@@ -759,7 +814,7 @@ const getStatusClasses = (status: string): string => {
                                 <div className="h-[300px] flex items-center justify-center">
                                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                                 </div>
-                            ) : data?.metrics?.order_types?.length > 0 ? (
+                            ) : (data?.metrics?.order_types?.length ?? 0) > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <h4 className="font-semibold mb-4">By Order Count</h4>
@@ -771,8 +826,8 @@ const getStatusClasses = (status: string): string => {
                                                         <span className="font-medium">{type.count} ({type.count_percentage}%)</span>
                                                     </div>
                                                     <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                                        <div 
-                                                            className="h-full bg-primary" 
+                                                        <div
+                                                            className="h-full bg-primary"
                                                             style={{ width: `${type.count_percentage}%` }}
                                                         />
                                                     </div>
@@ -792,8 +847,8 @@ const getStatusClasses = (status: string): string => {
                                                         </span>
                                                     </div>
                                                     <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                                        <div 
-                                                            className="h-full bg-green-500" 
+                                                        <div
+                                                            className="h-full bg-green-500"
                                                             style={{ width: `${type.revenue_percentage}%` }}
                                                         />
                                                     </div>
@@ -811,7 +866,7 @@ const getStatusClasses = (status: string): string => {
                     </Card>
                 </TabsContent>
 
-                   <TabsContent value="recentOrder" className="space-y-6">
+                <TabsContent value="recentOrder" className="space-y-6">
                     <Card>
                         <CardHeader>
                             <CardTitle>Recent Orders</CardTitle>
@@ -824,7 +879,7 @@ const getStatusClasses = (status: string): string => {
                                 <div className="h-[200px] flex items-center justify-center">
                                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                                 </div>
-                            ) : data?.recent_orders?.length > 0 ? (
+                            ) : (data?.recent_orders?.length ?? 0) > 0 ? (
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm">
                                         <thead>
@@ -842,16 +897,16 @@ const getStatusClasses = (status: string): string => {
                                                     <td className="p-3 font-medium">{order.order_number}</td>
                                                     <td className="p-3">${order.total}</td>
                                                     <td className="p-3">{order.time}</td>
-                                                    <td className="p-3"><OrderTypeBadge order={order} /></td> 
+                                                    <td className="p-3"><OrderTypeBadge order={order} /></td>
                                                     <td className='p-3' >
                                                         <Badge
                                                             variant="outline"
-                                                            className={`${getStatusClasses(order.status)}  font-medium`}>     
+                                                            className={`${getStatusClasses(order.status)}  font-medium`}>
                                                             {STATUS_CONFIG[order.status]?.label}
                                                         </Badge>
                                                     </td>
                                                 </tr>
-                                                
+
                                             ))}
                                         </tbody>
                                     </table>
@@ -960,11 +1015,10 @@ const MetricCard = ({ title, value, icon, change, loading, color, iconColor, sub
                     <div className={iconColor}>{icon}</div>
                 </div>
                 {!loading && change !== undefined && !isNaN(change) && (
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                        change >= 0 
-                            ? 'bg-green-500/10 text-green-600' 
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${change >= 0
+                            ? 'bg-green-500/10 text-green-600'
                             : 'bg-red-500/10 text-red-600'
-                    }`}>
+                        }`}>
                         {change >= 0 ? (
                             <TrendingUpIcon className="h-3 w-3" />
                         ) : (
@@ -974,7 +1028,7 @@ const MetricCard = ({ title, value, icon, change, loading, color, iconColor, sub
                     </div>
                 )}
             </div>
-            
+
             <div>
                 <p className="text-sm font-medium text-muted-foreground mb-1">{title}</p>
                 {loading ? (

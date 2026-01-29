@@ -14,9 +14,25 @@ class SizeController extends Controller
      */
     public function index()
     {
-        return Size::where('owner_id', Auth::user()->owner_id)
-            ->latest()
-            ->get();
+        $user = Auth::user();
+        $query = Size::query();
+
+        // 1. Scoping: Owner vs Staff
+        if ($user->role === 'owner') {
+            $query->where(function ($q) use ($user) {
+                $q->where('owner_id', $user->owner_id)
+                    ->orWhere('owner_id', $user->id);
+            });
+        } else {
+            // Use optional() for safety
+            $ownerUserId = optional($user->owner)->user_id ?? 0;
+            $query->where(function ($q) use ($user, $ownerUserId) {
+                $q->where('owner_id', $user->owner_id)
+                    ->orWhere('owner_id', $ownerUserId);
+            });
+        }
+
+        return $query->latest()->get();
     }
 
     /**

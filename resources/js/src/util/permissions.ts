@@ -1,21 +1,30 @@
 // resources/js/src/util/permissions.ts
 
 export const PERMISSION_MAP = {
+    // 1. Operations
     orders: {
-        label: 'Order Management',
-        actions: ['read', 'create', 'update', 'delete', 'print_bill']
+        label: 'Operations',
+        actions: ['pos_access', 'view_dashboard', 'view_history', 'view_live']
     },
+    // 2. Menu Management
     menu: {
-        label: 'Menu & Catalog',
-        actions: ['read', 'create', 'update', 'delete', 'sync_inventory']
+        label: 'Menu Management',
+        actions: ['manage_categories', 'manage_products', 'manage_inventory', 'manage_presets', 'manage_addons', 'manage_attributes']
     },
-    staff: {
-        label: 'Staff & Roles',
-        actions: ['read', 'create', 'update', 'delete']
-    },
+    // 3. Table Control
     tables: {
-        label: 'Table & QR Control',
-        actions: ['read', 'create', 'update', 'delete']
+        label: 'Table Control',
+        actions: ['manage_tables']
+    },
+    // 4. Kitchen Display
+    kitchen: {
+        label: 'Kitchen Display',
+        actions: ['access_kds']
+    },
+    // 5. Management (Business)
+    management: {
+        label: 'Management',
+        actions: ['view_business_insight', 'manage_branches', 'manage_staff', 'manage_delivery_partners', 'manage_permissions', 'manage_receipt_settings']
     }
 };
 
@@ -24,20 +33,26 @@ export const PERMISSION_MAP = {
  */
 export const ROLE_PRESETS = {
     chef: {
-        orders: { read: true, update: true },
-        menu: { read: true }
+        kitchen: { access_kds: true },
+        orders: { view_live: true },
+        menu: { manage_inventory: true }
     },
     waiter: {
-        orders: { read: true, create: true },
-        menu: { read: true }
+        orders: { pos_access: true, view_live: true },
+        tables: { manage_tables: true }, // Usually waiters need to check tables
+        menu: { manage_products: false } // Read-only access isn't explicitly defined yet, relying on 'manage' for edit. 
+        // For now, let's assume they might need to see menu, but 'manage' implies edit.
+        // If we need read-only, we might need 'view_products'.
+        // For now, following the plan 1:1 with Sidebar.
     },
     cashier: {
-        orders: { read: true, update: true, print_bill: true },
-        menu: { read: true }
+        orders: { pos_access: true, view_history: true, view_dashboard: true, view_live: true },
+        tables: { manage_tables: true }
     },
     manager: {
-        orders: { read: true, create: true, update: true, delete: true, print_bill: true },
-        menu: { read: true, create: true, update: true, delete: true, sync_inventory: true },
-        tables: { read: true, create: true, update: true, delete: true }
+        orders: { pos_access: true, view_dashboard: true, view_history: true, view_live: true },
+        menu: { manage_categories: true, manage_products: true, manage_inventory: true, manage_presets: true, manage_addons: true, manage_attributes: true },
+        tables: { manage_tables: true },
+        management: { manage_staff: true, manage_delivery_partners: true, manage_permissions: true, manage_receipt_settings: true }
     }
 };

@@ -30,7 +30,12 @@ const ModifierCenter = () => {
         setLoading(true);
         try {
             const res = await api.get('/admin/modifiers');
-            setGroups(res.data);
+            // Safety check: Ensure response data is an array
+            const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+            setGroups(data);
+        } catch (e) {
+            console.error(e);
+            setGroups([]);
         } finally { setLoading(false); }
     };
 
@@ -41,19 +46,19 @@ const ModifierCenter = () => {
             await api.put(`/admin/modifiers/${group.id}`, {
                 ...group,
                 is_active: newStatus,
-                modifiers: group.modifiers 
+                modifiers: group.modifiers
             });
-            
+
             setGroups(groups.map(g => g.id === group.id ? { ...g, is_active: newStatus } : g));
-            toast({ 
-                title: "Status Updated", 
-                description: `${group.name} is now ${newStatus ? 'Active' : 'Hidden'}` 
+            toast({
+                title: "Status Updated",
+                description: `${group.name} is now ${newStatus ? 'Active' : 'Hidden'}`
             });
         } catch (error) {
-            toast({ 
-                variant: "destructive", 
-                title: "Update Failed", 
-                description: "Could not change status." 
+            toast({
+                variant: "destructive",
+                title: "Update Failed",
+                description: "Could not change status."
             });
         }
     };
@@ -67,19 +72,19 @@ const ModifierCenter = () => {
     // Handle delete group
     const handleDelete = async () => {
         if (!groupToDelete) return;
-        
+
         setDeleting(true);
         try {
             await api.delete(`/admin/modifiers/${groupToDelete.id}`);
-            
+
             // Remove from state
             setGroups(groups.filter(g => g.id !== groupToDelete.id));
-            
+
             toast({
                 title: "Deleted Successfully",
                 description: `"${groupToDelete.name}" has been removed.`,
             });
-            
+
             setDeleteDialogOpen(false);
             setGroupToDelete(null);
         } catch (error) {
@@ -131,11 +136,11 @@ const ModifierCenter = () => {
                     <h1 className="text-2xl font-bold tracking-tight">Product Customizations</h1>
                     <p className="text-sm text-muted-foreground">Manage add-ons, modifiers, and their product associations.</p>
                 </div>
-                <Button 
-                    onClick={() => { 
-                        setEditingGroup(null); 
-                        setIsDialogOpen(true); 
-                    }} 
+                <Button
+                    onClick={() => {
+                        setEditingGroup(null);
+                        setIsDialogOpen(true);
+                    }}
                     className="rounded-md"
                 >
                     <Plus className="mr-2 h-4 w-4" /> Create Modifier Group
@@ -177,12 +182,12 @@ const ModifierCenter = () => {
                                             <div className="flex flex-col items-center gap-2">
                                                 <List className="h-10 w-10 text-muted-foreground/50" />
                                                 <p className="text-muted-foreground">No modifier groups found</p>
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="sm" 
-                                                    onClick={() => { 
-                                                        setEditingGroup(null); 
-                                                        setIsDialogOpen(true); 
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setEditingGroup(null);
+                                                        setIsDialogOpen(true);
                                                     }}
                                                     className="mt-2"
                                                 >
@@ -202,8 +207,8 @@ const ModifierCenter = () => {
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge 
-                                                variant="outline" 
+                                            <Badge
+                                                variant="outline"
                                                 className="capitalize font-normal text-[11px] border-primary/20 bg-primary/5"
                                             >
                                                 {group.selection_type} ({group.min_selection}-{group.max_selection})
@@ -212,12 +217,11 @@ const ModifierCenter = () => {
                                         <TableCell>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {group.modifiers?.slice(0, 3).map((m: any) => (
-                                                    <Badge 
-                                                        key={m.id} 
-                                                        variant="secondary" 
-                                                        className={`text-[10px] font-medium border-none ${
-                                                            m.is_available ? "" : "opacity-50 line-through bg-muted"
-                                                        }`}
+                                                    <Badge
+                                                        key={m.id}
+                                                        variant="secondary"
+                                                        className={`text-[10px] font-medium border-none ${m.is_available ? "" : "opacity-50 line-through bg-muted"
+                                                            }`}
                                                     >
                                                         {m.name}
                                                     </Badge>
@@ -231,26 +235,26 @@ const ModifierCenter = () => {
                                         </TableCell>
                                         <TableCell className="text-center">
                                             <div className="flex justify-center">
-                                                <Switch 
-                                                    checked={!!group.is_active} 
+                                                <Switch
+                                                    checked={!!group.is_active}
                                                     onCheckedChange={() => toggleGroupStatus(group)}
                                                 />
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right space-x-1">
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                onClick={() => { 
-                                                    setEditingGroup(group); 
-                                                    setIsDialogOpen(true); 
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => {
+                                                    setEditingGroup(group);
+                                                    setIsDialogOpen(true);
                                                 }}
                                             >
                                                 <Pencil size={14} className="text-muted-foreground hover:text-primary" />
                                             </Button>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
                                                 className="text-muted-foreground hover:text-destructive"
                                                 onClick={() => confirmDelete(group)}
                                             >
@@ -265,18 +269,18 @@ const ModifierCenter = () => {
                 </TabsContent>
 
                 <TabsContent value="mapping" className="animate-in fade-in duration-300">
-                    <ProductModifierLinker 
-                        modifierGroups={groups} 
-                        onRefresh={fetchGroups} 
+                    <ProductModifierLinker
+                        modifierGroups={groups}
+                        onRefresh={fetchGroups}
                     />
                 </TabsContent>
             </Tabs>
 
-            <ModifierGroupDialog 
-                open={isDialogOpen} 
-                onOpenChange={setIsDialogOpen} 
-                group={editingGroup} 
-                onSuccess={fetchGroups} 
+            <ModifierGroupDialog
+                open={isDialogOpen}
+                onOpenChange={setIsDialogOpen}
+                group={editingGroup}
+                onSuccess={fetchGroups}
             />
 
             {/* Delete Confirmation Modal */}

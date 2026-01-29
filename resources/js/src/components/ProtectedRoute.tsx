@@ -8,7 +8,7 @@ const ProtectedRoute = ({ children, requiredPermission }: { children: JSX.Elemen
     const location = useLocation();
 
     // 1. Hard Loading: Wait if the system is still fetching initial auth
-    if (loading) return null; 
+    if (loading) return null;
 
     // 2. No User: Redirect to login
     if (!user) {
@@ -16,7 +16,8 @@ const ProtectedRoute = ({ children, requiredPermission }: { children: JSX.Elemen
     }
 
     // 3. Permission Check Logic
-    if (requiredPermission && user.role !== 'owner') {
+    // 3. Permission Check Logic
+    if (requiredPermission && user.role !== 'owner' && user.role !== 'super_admin') {
         const { module, action } = requiredPermission;
 
         // --- THE CRITICAL GUARD ---
@@ -30,7 +31,10 @@ const ProtectedRoute = ({ children, requiredPermission }: { children: JSX.Elemen
         const hasAccess = !!user.permissions?.[module]?.[action];
 
         if (!hasAccess) {
-            console.warn(`Unauthorized: Module[${module}] Action[${action}]`);
+            console.warn(`[ProtectedRoute] Unauthorized Access Attempt:`);
+            console.warn(`- User Role: ${user.role}`);
+            console.warn(`- Required: Module[${module}] -> Action[${action}]`);
+            console.warn(`- User Permissions for Module[${module}]:`, user.permissions[module]);
             return <Navigate to="/admin/unauthorized" replace />;
         }
     }

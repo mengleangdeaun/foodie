@@ -280,9 +280,13 @@ class POSController extends Controller
             $day = now()->format('d');
             $seq = 1;
             $orderCode = '';
+            $branchPrefix = sprintf('%02d', $branch->id); // e.g. 01, 02
+
             for ($i = 0; $i < 1000; $i++) {
                 $seqFormatted = str_pad($seq, 3, '0', STR_PAD_LEFT);
-                $orderCodeCandidate = "$yearDigit$monthLetter$day$seqFormatted";
+                // Proposed format: 01-6A30001
+                $orderCodeCandidate = "{$branchPrefix}-{$yearDigit}{$monthLetter}{$day}{$seqFormatted}";
+
                 if (!Order::where('order_code', $orderCodeCandidate)->exists()) {
                     $orderCode = $orderCodeCandidate;
                     break;

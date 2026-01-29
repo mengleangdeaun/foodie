@@ -102,9 +102,11 @@ import {
 
 // Import your helper mapping
 import { PERMISSION_MAP, ROLE_PRESETS } from '@/util/permissions';
+import { usePermission } from '@/hooks/usePermission';
 
 const OwnerStaffManagement = () => {
     const { toast } = useToast();
+    const { canDo } = usePermission();
     const [staff, setStaff] = useState<any[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -705,7 +707,9 @@ const OwnerStaffManagement = () => {
                         <Tabs defaultValue="basic" className="w-full">
                             <TabsList className="grid w-full grid-cols-3">
                                 <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                                <TabsTrigger value="permissions">Permissions</TabsTrigger>
+                                {canDo('management', 'manage_permissions') && (
+                                    <TabsTrigger value="permissions">Permissions</TabsTrigger>
+                                )}
                                 <TabsTrigger value="preview">Preview</TabsTrigger>
                             </TabsList>
 
@@ -936,53 +940,55 @@ const OwnerStaffManagement = () => {
                                 </div>
                             </TabsContent>
 
-                            <TabsContent value="permissions" className="space-y-6">
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-2">
-                                        <Lock className="h-5 w-5 text-primary" />
-                                        <div>
-                                            <Label className="text-base font-medium">Granular Permissions</Label>
-                                            <p className="text-sm text-muted-foreground">
-                                                Fine-tune access for this staff member
-                                            </p>
+                            {canDo('management', 'manage_permissions') && (
+                                <TabsContent value="permissions" className="space-y-6">
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <Lock className="h-5 w-5 text-primary" />
+                                            <div>
+                                                <Label className="text-base font-medium">Granular Permissions</Label>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Fine-tune access for this staff member
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {Object.entries(PERMISSION_MAP).map(([module, config]) => (
+                                                <Card key={module} className="overflow-hidden">
+                                                    <CardHeader className="pb-3 bg-muted/50">
+                                                        <CardTitle className="text-sm font-bold uppercase">
+                                                            {config.label}
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="pt-4">
+                                                        <div className="space-y-3">
+                                                            {config.actions.map(action => (
+                                                                <div
+                                                                    key={action}
+                                                                    className="flex items-center justify-between"
+                                                                >
+                                                                    <Label
+                                                                        htmlFor={`${module}-${action}`}
+                                                                        className="text-sm cursor-pointer flex-1"
+                                                                    >
+                                                                        {action.replace('_', ' ')}
+                                                                    </Label>
+                                                                    <Checkbox
+                                                                        id={`${module}-${action}`}
+                                                                        checked={formData.permissions[module]?.[action] || false}
+                                                                        onCheckedChange={() => handleToggle(module, action)}
+                                                                    />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            ))}
                                         </div>
                                     </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {Object.entries(PERMISSION_MAP).map(([module, config]) => (
-                                            <Card key={module} className="overflow-hidden">
-                                                <CardHeader className="pb-3 bg-muted/50">
-                                                    <CardTitle className="text-sm font-bold uppercase">
-                                                        {config.label}
-                                                    </CardTitle>
-                                                </CardHeader>
-                                                <CardContent className="pt-4">
-                                                    <div className="space-y-3">
-                                                        {config.actions.map(action => (
-                                                            <div
-                                                                key={action}
-                                                                className="flex items-center justify-between"
-                                                            >
-                                                                <Label
-                                                                    htmlFor={`${module}-${action}`}
-                                                                    className="text-sm cursor-pointer flex-1"
-                                                                >
-                                                                    {action.replace('_', ' ')}
-                                                                </Label>
-                                                                <Checkbox
-                                                                    id={`${module}-${action}`}
-                                                                    checked={formData.permissions[module]?.[action] || false}
-                                                                    onCheckedChange={() => handleToggle(module, action)}
-                                                                />
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        ))}
-                                    </div>
-                                </div>
-                            </TabsContent>
+                                </TabsContent>
+                            )}
 
                             <TabsContent value="preview" className="space-y-6">
                                 <Card>

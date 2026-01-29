@@ -9,7 +9,7 @@ interface CustomQuillEditorProps extends Omit<ReactQuillProps, 'onChange'> {
   required?: boolean;
   minHeight?: number;
   maxHeight?: number;
-  variant?: 'default' | 'compact' | 'minimal' | 'seamless' | 'minimal-border' | 'bordered';
+  variant?: 'default' | 'compact' | 'minimal' | 'seamless' | 'minimal-border';
   showToolbar?: boolean;
   className?: string;
   insideCard?: boolean;
@@ -202,9 +202,7 @@ const CustomQuillEditor = React.forwardRef<ReactQuill, CustomQuillEditorProps>(
           break;
         case 'minimal-border':
           baseClasses.push('minimal-border');
-          break;
-        case 'bordered':
-          baseClasses.push('ql-bordered');
+
           break;
         default:
           break;
@@ -241,16 +239,14 @@ const CustomQuillEditor = React.forwardRef<ReactQuill, CustomQuillEditorProps>(
         classes.push('rounded-lg border border-input/50 bg-transparent');
       } else if (variant === 'minimal-border') {
         classes.push('rounded-lg border border-input/30 bg-transparent');
-      } else if (variant === 'bordered') {
-        classes.push('rounded-lg border border-input bg-card shadow-sm');
       } else {
         // default
         classes.push('rounded-lg border border-input bg-background shadow-sm hover:border-input/80');
       }
       
-      if (isFocused && variant !== 'seamless') {
-        classes.push('ring-2 ring-primary/10 border-primary');
-      }
+      // if (isFocused && variant !== 'seamless') {
+      //   classes.push('ring-1 ring-primary/10 border-primary');
+      // }
       
       if (error) {
         classes.push('border-destructive');

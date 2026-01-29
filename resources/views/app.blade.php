@@ -9,7 +9,7 @@
 
     <title>Foodie - Make your food ordering easy</title>
 
-    <link rel="shortcut icon" href="{{ asset('favico.png') }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.png') }}">
 
     <link href="https://fonts.googleapis.com/css?family=Nunito:400,600,700" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">

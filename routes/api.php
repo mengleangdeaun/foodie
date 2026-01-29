@@ -106,8 +106,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/branches/{id}/switch', [BranchController::class, 'switch']);
         Route::get('/branch/dashboard', [BranchDashboardController::class, 'index']);
         Route::get('/branch/dashboard/realtime', [BranchDashboardController::class, 'realtime']);
-        Route::get('/settings/receipt', [ReceiptSettingController::class, 'show']);
-        Route::post('/settings/receipt', [ReceiptSettingController::class, 'update']);
 
         // Add these routes in your api.php file under the admin prefix
 
@@ -116,6 +114,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/price-size/{branch}/products/{product}/sizes', [BranchProductSizeApiController::class, 'update']);
         Route::post('/price-size/{branch}/products/{product}/sizes/bulk', [BranchProductSizeApiController::class, 'bulkUpdate']);
 
+        // Universal Branch List (Owned/Allowed branches)
+        Route::get('/branches', [BranchController::class, 'index']);
+
+        // Universal Delivery Partner List (for viewing, POS uses data_for_pos)
+        // If staff needs to MANAGE it, we'd need more logic, but for now we unblock 'index'
+        Route::get('/delivery-partners', [DeliveryPartnerController::class, 'index']);
+        Route::apiResource('delivery-partners', DeliveryPartnerController::class)->except(['index']);
 
         Route::get('/remark-presets', [RemarkPresetController::class, 'index']);
         Route::post('/remark-presets', [RemarkPresetController::class, 'store']);
@@ -130,24 +135,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
             Route::get('/owner/dashboard', [App\Http\Controllers\Owner\OwnerDashboardController::class, 'index']);
             Route::get('/branches/schedules', [BranchController::class, 'getSchedules']);
-            Route::apiResource('branches', BranchController::class);
-            Route::post('branches/{id}/clone', [BranchController::class, 'clone']);
-            Route::apiResource('staff', StaffController::class);
-            Route::put('/staff/{id}/status', [StaffController::class, 'updateStatus']);
 
-            Route::post('/branches/{id}/appearance', [BranchController::class, 'updateAppearance']);
-            Route::post('/branches/{id}/appearance/reset', [BranchController::class, 'resetAppearance']);
+            // Critical Branch Operations (Owner Only)
+            Route::post('/branches', [BranchController::class, 'store']);
+            Route::delete('/branches/{id}', [BranchController::class, 'destroy']);
+            Route::post('branches/{id}/clone', [BranchController::class, 'clone']);
+
             Route::post('/branches/{id}/sync-products', [BranchController::class, 'syncAllProducts']);
 
-            Route::apiResource('modifiers', ModifierController::class);
-            Route::post('products/{product}/sync-modifiers', [ModifierController::class, 'syncProductGroups']);
-            Route::post('modifiers/bulk-sync', [ModifierController::class, 'bulkSync']);
-
-            Route::apiResource('tags', TagController::class);
-            Route::apiResource('sizes', SizeController::class);
-
-            Route::post('/branches/{id}/test-telegram', [BranchController::class, 'testTelegram']);
-            Route::get('/delivery-partners', [DeliveryPartnerController::class, 'index']);
+            // Delivery Partners (CRUD mostly for owners)
             Route::apiResource('delivery-partners', DeliveryPartnerController::class)->except(['index']);
 
         });
@@ -157,56 +153,131 @@ Route::middleware('auth:sanctum')->group(function () {
          */
 
         // Menu Management
-        Route::middleware('permission:menu,read')->group(function () { // Fixed: menu,read
+        // 1. General View Access (for POS and lists)
+        // We need a 'view_menu' or similar. 
+        // For now, let's use 'manage_products' as the baseline for Management Routes, 
+        // and 'pos_access' or 'view_menu' for POS.
+        // But since we didn't add 'view_menu' yet, let's use the most common one: 'manage_products' for the admin list.
+
+
+        // --- Categories & Products (Admin) ---
+        Route::middleware('permission:menu,manage_products')->group(function () {
             Route::get('/categories', [CategoryController::class, 'index']);
             Route::get('/show_categories', [CategoryController::class, 'showCategory']);
             Route::get('/products', [ProductController::class, 'index']);
-            Route::get('/pos-products', [PosController::class, 'show']);
 
-            Route::middleware('permission:menu,update')->group(function () { // Fixed: menu,update
-                Route::apiResource('categories', CategoryController::class)->except(['index']);
-                Route::apiResource('products', ProductController::class)->except(['index']);
+            Route::apiResource('categories', CategoryController::class)->except(['index']);
+            Route::apiResource('products', ProductController::class)->except(['index']);
+            Route::post('/products/toggle-availability', [ProductController::class, 'toggleAvailability']);
 
-                Route::post('/products/toggle-availability', [ProductController::class, 'toggleAvailability']);
-            });
+            // Remark Presets
+            Route::get('/remark-presets', [RemarkPresetController::class, 'index']);
+            Route::post('/remark-presets', [RemarkPresetController::class, 'store']);
+            Route::put('/remark-presets/{id}', [RemarkPresetController::class, 'update']);
+            Route::post('/remark-presets/{id}/sync', [RemarkPresetController::class, 'sync']);
+            Route::delete('/remark-presets/{remarkPreset}', [RemarkPresetController::class, 'destroy']);
+
+            // Modifiers (Product Addons)
+            Route::apiResource('modifiers', ModifierController::class);
+            Route::post('products/{product}/sync-modifiers', [ModifierController::class, 'syncProductGroups']);
+            Route::post('modifiers/bulk-sync', [ModifierController::class, 'bulkSync']);
+
+            // Delivery Partners
+            Route::apiResource('delivery-partners', DeliveryPartnerController::class);
+
+            // Tags & Sizes
+            Route::apiResource('tags', TagController::class);
+            Route::apiResource('sizes', SizeController::class);
+
+            // Inventory
+            Route::get('/branches/{branch}/inventory', [BranchInventoryController::class, 'index']);
+            Route::put('/branches/{branch}/products/{product}', [BranchInventoryController::class, 'update']);
+            Route::post('/branches/{branch}/inventory/bulk', [BranchInventoryController::class, 'bulkUpdate']);
+            Route::post('/branches/{branch}/inventory/reorder', [BranchInventoryController::class, 'bulkReorder']);
         });
 
-        // Branch Inventory
-        Route::middleware('permission:menu,read')->group(function () { // Fixed: menu,read
-            Route::get('/branches/{branch}/inventory', [BranchInventoryController::class, 'index']);
-
-            Route::middleware('permission:menu,update')->group(function () { // Fixed: menu,update
-                Route::put('/branches/{branch}/products/{product}', [BranchInventoryController::class, 'update']);
-                Route::post('/branches/{branch}/inventory/bulk', [BranchInventoryController::class, 'bulkUpdate']);
-                Route::post('/branches/{branch}/inventory/reorder', [BranchInventoryController::class, 'bulkReorder']);
-            });
+        // --- POS Product Access ---
+        // POS needs to read menu, but might not have 'manage_products'. 
+        // It definitely has 'orders.pos_access'.
+        Route::middleware('permission:orders,pos_access')->group(function () {
+            Route::get('/pos-products', [PosController::class, 'show']);
         });
 
         // Table & QR Management
-        Route::middleware('permission:tables,read')->group(function () { // Fixed: tables,read
+        Route::middleware('permission:tables,manage_tables')->group(function () {
             Route::apiResource('tables', TableController::class);
-
-            Route::middleware('permission:tables,update')->group(function () { // Fixed: tables,update
-                Route::post('/tables/{id}/regenerate', [TableController::class, 'regenerate']);
-                Route::get('/tables/{id}/qr', [TableController::class, 'generateQr']);
-            });
+            Route::post('/tables/{id}/regenerate', [TableController::class, 'regenerate']);
+            Route::get('/tables/{id}/qr', [TableController::class, 'generateQr']);
         });
 
-        // Order Management (The Kitchen/Cashier View)
-        Route::middleware('permission:orders,read')->group(function () { // Fixed: orders,read
-            Route::get('/kitchen/reports/shift', [KitchenReportController::class, 'getShiftStats']);
-            Route::get('/orders/kitchen', [App\Http\Controllers\Owner\OrderController::class, 'kitchenIndex']);
-            Route::get('/order/stats/history', [App\Http\Controllers\Owner\OrderController::class, 'getKitchenStats']);
-            Route::get('/orders/live', [App\Http\Controllers\Owner\OrderController::class, 'liveMonitorIndex']);
-            Route::get('/orders/history', [App\Http\Controllers\Owner\OrderController::class, 'index']);
-            Route::post('/pos/order', [POSController::class, 'store']);
-            Route::get('/orders/{order}/print-receipt', [ReceiptPrintController::class, 'printReceipt']);
-            Route::get('/orders/{order}/thermal-print', [ReceiptPrintController::class, 'printThermalReceipt']);
-            Route::get('/receipt-settings/print', [ReceiptPrintController::class, 'getReceiptSettings']);
-            Route::post('/orders/batch-print', [ReceiptPrintController::class, 'batchPrint']);
-            Route::get('/pos_delivery-partners', [DeliveryPartnerController::class, 'data_for_pos']);
-            Route::middleware('permission:orders,update')->group(function () { // Fixed: orders,update
-                Route::patch('/orders/{id}/status', [App\Http\Controllers\Owner\OrderController::class, 'updateStatus']);
+        // Order Management
+        Route::group([], function () {
+            // Kitchen Display
+            Route::middleware('permission:kitchen,access_kds')->group(function () {
+                Route::get('/kitchen/reports/shift', [KitchenReportController::class, 'getShiftStats']);
+                Route::get('/orders/kitchen', [App\Http\Controllers\Owner\OrderController::class, 'kitchenIndex']);
+                Route::get('/order/stats/history', [App\Http\Controllers\Owner\OrderController::class, 'getKitchenStats']);
+            });
+
+            // Live Orders & History
+            Route::middleware('permission:orders,view_live')->group(function () {
+                Route::get('/orders/live', [App\Http\Controllers\Owner\OrderController::class, 'liveMonitorIndex']);
+            });
+
+            Route::middleware('permission:orders,view_history')->group(function () {
+                Route::get('/orders/history', [App\Http\Controllers\Owner\OrderController::class, 'index']);
+            });
+
+            // POS Operations (Create Order)
+            Route::middleware('permission:orders,pos_access')->group(function () {
+                Route::post('/pos/order', [POSController::class, 'store']);
+                Route::get('/pos_delivery-partners', [DeliveryPartnerController::class, 'data_for_pos']);
+            });
+
+            // Business Management (Staff, etc)
+            Route::middleware('permission:management,manage_staff')->group(function () {
+                Route::apiResource('staff', StaffController::class);
+                Route::put('/staff/{id}/status', [StaffController::class, 'updateStatus']);
+            });
+
+            // Branch Management (Content, Settings, Appearance)
+            Route::middleware('permission:management,manage_branches')->group(function () {
+                Route::get('/branches/{id}', [BranchController::class, 'show']);
+                Route::put('/branches/{id}', [BranchController::class, 'update']);
+                Route::patch('/branches/{id}', [BranchController::class, 'update']);
+
+                Route::post('/branches/{id}/appearance', [BranchController::class, 'updateAppearance']);
+                Route::post('/branches/{id}/appearance/reset', [BranchController::class, 'resetAppearance']);
+                Route::post('/branches/{id}/test-telegram', [BranchController::class, 'testTelegram']);
+            });
+
+            // Receipt Settings Configuration
+            // GET is needed for printing (POS, Live Orders), so it should be accessible to staff with order permissions
+            Route::get('/settings/receipt', [ReceiptSettingController::class, 'show']);
+
+            Route::middleware('permission:management,manage_receipt_settings')->group(function () {
+                // Only UPDATE is restricted
+                Route::post('/settings/receipt', [ReceiptSettingController::class, 'update']);
+            });
+
+            // Common Order Actions (Print, etc) - relaxed check or specific?
+            // Printing usually requires read access to the order.
+            // Let's allow if user has ANY of the main order permissions.
+            // For simplicity, let's assume 'view_live' or 'view_history' or 'pos_access' allows printing.
+            // But middleware is singular.
+            // Let's use a shared route group without specific middleware if safe, or duplicate.
+            // SAFEST: Protect detailed actions with 'orders,view_live' (since that's where printing often happens)
+            // or 'orders,pos_access' for POS printing.
+            // We can leave these open to 'admin' prefix but rely on controller policy? 
+            // No, better to pick a reasonable default like 'orders,view_live' which most staff have.
+            // Cashiers have 'view_live'. Waiters have 'view_live'. Managers have 'view_live'.
+
+            Route::middleware('permission:orders,view_live')->group(function () {
+                Route::get('/orders/{order}/print-receipt', [ReceiptPrintController::class, 'printReceipt']);
+                Route::get('/orders/{order}/thermal-print', [ReceiptPrintController::class, 'printThermalReceipt']);
+                Route::get('/receipt-settings/print', [ReceiptPrintController::class, 'getReceiptSettings']);
+                Route::post('/orders/batch-print', [ReceiptPrintController::class, 'batchPrint']);
+                Route::patch('/orders/{id}/status', [App\Http\Controllers\Owner\OrderController::class, 'updateStatus']); // Update Status
             });
         });
     });

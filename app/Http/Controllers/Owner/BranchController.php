@@ -18,9 +18,24 @@ class BranchController extends Controller
      */
     public function index()
     {
-        // Only show branches belonging to the authenticated owner
-        $branches = Branch::where('owner_id', Auth::user()->owner_id)->get();
-        return response()->json($branches);
+        $user = Auth::user();
+        $query = Branch::query();
+
+        if ($user->role === 'owner') {
+            $query->where(function ($q) use ($user) {
+                $q->where('owner_id', $user->owner_id)
+                    ->orWhere('owner_id', $user->id);
+            });
+        } else {
+            // For staff, show all branches of the owner (or filter by assigned if needed later)
+            $ownerUserId = optional($user->owner)->user_id ?? 0;
+            $query->where(function ($q) use ($user, $ownerUserId) {
+                $q->where('owner_id', $user->owner_id)
+                    ->orWhere('owner_id', $ownerUserId);
+            });
+        }
+
+        return response()->json($query->get());
     }
 
 
@@ -97,8 +112,13 @@ class BranchController extends Controller
      * Update the specified branch.
      */
     // app/Http/Controllers/Admin/BranchController.php
-    public function update(Request $request, Branch $branch)
+    public function update(Request $request, $id)
     {
+        $user = Auth::user();
+        $branch = Branch::where(function ($q) use ($user) {
+            $q->where('owner_id', $user->owner_id)
+                ->orWhere('owner_id', $user->id);
+        })->findOrFail($id);
         // 1. Manually cast boolean strings from FormData to actual integers/booleans
         $request->merge([
             'is_active' => filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN) ? 1 : 0,
@@ -191,7 +211,11 @@ class BranchController extends Controller
      */
     public function show($id)
     {
-        $branch = Branch::where('owner_id', Auth::user()->owner_id)->findOrFail($id);
+        $user = Auth::user();
+        $branch = Branch::where(function ($q) use ($user) {
+            $q->where('owner_id', $user->owner_id)
+                ->orWhere('owner_id', $user->id);
+        })->findOrFail($id);
         return response()->json($branch);
     }
 

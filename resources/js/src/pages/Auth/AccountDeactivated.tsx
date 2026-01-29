@@ -54,7 +54,7 @@ const AccountDeactivated = () => {
             </div>
 
             <div className="mt-12 text-slate-400 text-[10px] uppercase tracking-[0.2em] font-bold">
-                Foodie Multi-Tenant System
+                DGS Multi-Tenant Security System
             </div>
         </div>
     );

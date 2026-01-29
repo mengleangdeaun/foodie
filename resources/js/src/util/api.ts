@@ -8,10 +8,10 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 403) {
-    
-            if (!error.config.url?.endsWith('/login')) {
-                window.location.href = '/admin/unauthorized';
-            }
+            console.error('Forbidden Access:', error.config.url);
+            // if (!error.config.url?.endsWith('/login')) {
+            //     window.location.href = '/admin/unauthorized';
+            // }
         }
 
         if (error.response?.status === 401) {
