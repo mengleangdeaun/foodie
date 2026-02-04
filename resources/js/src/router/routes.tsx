@@ -10,7 +10,6 @@ const AccountDeactivated = lazy(() => import('../pages/Auth/AccountDeactivated')
 const ForgotPassword = lazy(() => import('../pages/Auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('../pages/Auth/ResetPassword'));
 const CustomerMenu = lazy(() => import('../pages/Customer/CustomerMenu'));
-const AuthDebug = lazy(() => import('../pages/Debug/AuthDebug'));
 
 
 // Super Admin
@@ -61,7 +60,6 @@ const routes = [
     { path: '/menu/scan/:token', element: <CustomerMenu />, layout: 'blank' },
     { path: '/admin/unauthorized', element: <Unauthorized />, layout: 'blank' },
     { path: '/auth/account-deactivated', element: <AccountDeactivated />, layout: 'blank' },
-    { path: '/debug-auth', element: <AuthDebug />, layout: 'blank' },
 
 
     // --- Super Admin ---
